@@ -126,10 +126,24 @@ export function buildMainMachine({ spouts = 3 } = {}) {
 
   const brewY = { upper: 0.52, middle: 0.47, lower: 0.43 };
 
+  // collision boxes (local, [min, max]); the outlet bay between the side walls stays free
+  const obstacles = [
+    ['본체 하부', [-W / 2, 0, -D / 2], [W / 2, 0.088, D / 2]],
+    ['드립 트레이', [-W / 2 + 0.03, 0.088, front - 0.2], [W / 2 - 0.03, 0.109, front]],
+    ['좌측 벽', [-W / 2, 0.088, -D / 2], [-W / 2 + 0.04, 0.36, D / 2]],
+    ['우측 벽', [W / 2 - 0.04, 0.088, -D / 2], [W / 2, 0.36, D / 2]],
+    ['투출부 뒷판', [-W / 2, 0.088, -D / 2], [W / 2, 0.36, front - 0.235]],
+    ['헤드', [-W / 2, 0.356, -D / 2], [W / 2, 0.73, front + 0.015]],
+    ['원두통', [-0.28, 0.73, -0.19], [0.04, 0.83, -0.01]],
+    ['카드 단말기', [0.11, 0.36, front], [0.23, 0.4, front + 0.03]],
+    ...spoutX.map((x, i) => [`투출구${i + 1}`, [x - 0.037, 0.297, front - 0.137], [x + 0.037, 0.36, front - 0.063]]),
+  ].map(([name, min, max]) => ({ name: `커피머신 ${name}`, min, max }));
+
   return {
     group: g,
     slots,
     shells,
+    obstacles,
     anchors: { ...anchors, spoutTops, card: new THREE.Vector3(0.17, 0.386, front + 0.03) },
     pickables: [
       { object: reader, id: 'card' },
@@ -206,9 +220,20 @@ export function buildIceDispenser() {
   push.material.roughness = 0.4;
   const led = add(at(box(0.03, 0.006, 0.004, emissive(0x39d353, 1)), W / 2 - 0.04, 0.73, front + 0.002));
 
+  const obstacles = [
+    ['하부', [-W / 2, 0, -D / 2], [W / 2, 0.069, D / 2]],
+    ['트레이', [-W / 2 + 0.02, 0.069, front - 0.17], [W / 2 - 0.02, 0.087, front - 0.01]],
+    ['좌측 벽', [-W / 2, 0.07, -D / 2], [-W / 2 + 0.025, 0.31, D / 2]],
+    ['우측 벽', [W / 2 - 0.025, 0.07, -D / 2], [W / 2, 0.31, D / 2]],
+    ['뒷판', [-W / 2, 0.07, -D / 2], [W / 2, 0.31, front - 0.195]],
+    ['상부', [-W / 2, 0.31, -D / 2], [W / 2, 0.75, D / 2]],
+    ['노즐', [-0.05, 0.24, front - 0.13], [0.05, 0.315, front - 0.05]],
+  ].map(([name, min, max]) => ({ name: `제빙기 ${name}`, min, max }));
+
   return {
     group: g,
     shells,
+    obstacles,
     slots: { tray: new THREE.Vector3(0, 0.088, front - 0.09) },
     anchors: { nozzle: new THREE.Vector3(0, 0.24, front - 0.09) },
     pickables: [{ object: paddle, id: 'lever' }],
@@ -265,10 +290,21 @@ export function buildCupDispenser() {
     stacks[type] = stack;
   }
 
+  // the two output windows (x ±0.015..±0.175, y 0.02..0.205, 0.155 deep) stay free
+  const obstacles = [
+    ['상부', [-W / 2, 0.205, -D / 2], [W / 2, H, front + 0.005]],
+    ['하부', [-W / 2, 0, -D / 2], [W / 2, 0.02, D / 2]],
+    ['가운데 칸막이', [-0.015, 0.02, -D / 2], [0.015, 0.205, front + 0.005]],
+    ['좌측 벽', [-W / 2, 0.02, -D / 2], [-0.175, 0.205, front + 0.005]],
+    ['우측 벽', [0.175, 0.02, -D / 2], [W / 2, 0.205, front + 0.005]],
+    ['출구 안쪽', [-W / 2, 0.02, -D / 2], [W / 2, 0.205, front - 0.155]],
+  ].map(([name, min, max]) => ({ name: `컵 디스펜서 ${name}`, min, max }));
+
   return {
     group: g,
     shells,
     slots,
+    obstacles,
     anchors: {},
     pickables: [],
     xray(on) {

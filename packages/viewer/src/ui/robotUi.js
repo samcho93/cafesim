@@ -92,8 +92,8 @@ export class RobotCard {
     this.robot = robot;
     this.el = document.createElement('div');
     this.el.className = 'robot-card';
-    this.el.innerHTML = `<div class="rc-head"><b>🤖 ${String(model).toUpperCase()}</b><span class="rc-src">studyUR 기구학 · ur_description 메시</span><button data-a="fold">URScript ▾</button></div>
-      <div class="rc-status">로봇 모델을 불러오는 중...</div><div class="rc-joints"></div><pre class="rc-script" hidden></pre>`;
+    this.el.innerHTML = `<div class="rc-head"><b>🤖 ${String(model).toUpperCase()}</b><span class="rc-src">studyUR 기구학 · ur_description 메시</span><button data-a="col" title="충돌 검사 영역(장애물·로봇 캡슐) 표시">충돌 영역</button><button data-a="fold">URScript ▾</button></div>
+      <div class="rc-status">로봇 모델을 불러오는 중...</div><div class="rc-joints"></div><div class="rc-plan"></div><pre class="rc-script" hidden></pre>`;
     document.getElementById('stage').append(this.el);
     this.statusEl = this.el.querySelector('.rc-status');
     this.jointsEl = this.el.querySelector('.rc-joints');
@@ -107,6 +107,18 @@ export class RobotCard {
       this.el.classList.toggle('busy', !!s.busy);
     });
     robot.on('urscript', (lines) => (this.scriptEl.textContent = lines.join('\n')));
+    const planEl = this.el.querySelector('.rc-plan');
+    robot.on('plan', (p) => {
+      const detours = p.report.filter((r) => r.attempts.length > 1);
+      planEl.innerHTML = p.unresolved
+        ? `<span class="bad">⚠ 충돌 회피 실패: ${p.unresolved.capsule} ↔ ${p.unresolved.obstacle}</span>`
+        : `<span class="ok">✔ 충돌 검사 통과</span> ${detours.length ? `· 회피 경로 ${detours.length}개 (${detours.map((d) => d.chosen).join(', ')})` : '· 직접 경로'}`;
+    });
+    this.el.querySelector('[data-a="col"]').onclick = (e) => {
+      this.debugOn = !this.debugOn;
+      robot.setDebug(this.debugOn);
+      e.target.classList.toggle('on', this.debugOn);
+    };
     setInterval(() => {
       if (!robot.q) return;
       this.jointsEl.innerHTML = ['Base', 'Shoulder', 'Elbow', 'Wrist1', 'Wrist2', 'Wrist3'].map((n, i) => `<span>${n}<b>${((robot.q[i] * 180) / Math.PI).toFixed(1)}°</b></span>`).join('');

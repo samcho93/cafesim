@@ -20,15 +20,18 @@ export default definePlatform({
   kiosk: './kiosk.html?platform=m400-robot&mode=status',
   layout: {
     ...m400.layout,
-    pickup: [-0.5, 0, 0.72],
-    pickupStand: true,
+    // the drink is handed over on a table in front of the robot (customer side)
+    pickup: [-0.13, 0, 1.42],
+    pickupTable: { size: [0.62, 0.36] },
     robot: {
       model: 'ur5e',
-      base: [-0.1, 0, 0.7], // world position of the UR base frame (on a pedestal in front of the counter)
-      tcp: [0, 0, 0.15, 0, 0, 0], // gripper TCP (UR pose, base of tool0)
+      base: [-0.13, 0, 0.8], // world position of the UR base frame (on a pedestal in front of the counter)
+      tcp: [0, 0, 0.19, 0, 0, 0], // gripper TCP (UR pose, base of tool0): long fingers keep the wrist out of the machines
       approach: 0.15, // m, pre-grasp distance toward the customer
       lift: 0.03, // m, lift before carrying
       speed: { joint: 1.2, linear: 0.25 },
+      // collision-free transit: straight line in front of the machines (world z, height y)
+      corridor: { z: 0.3, height: 0.24 },
     },
   },
 });

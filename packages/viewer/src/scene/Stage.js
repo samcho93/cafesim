@@ -22,6 +22,7 @@ export class Stage {
     this.onToast = onToast ?? (() => {});
     this.units = [];
     this.slotPos = new Map();
+    this.obstacles = []; // world AABBs for robot collision checking
     this.selected = null;
     this.snapshot = null;
     this.clock = new THREE.Clock();
@@ -126,6 +127,25 @@ export class Stage {
     label.position.set(p[0], 0.002, p[2] + 0.11);
     s.add(label);
     this.slotPos.set('pickup', new THREE.Vector3(p[0], 0.001, p[2]));
+    this.obstacles.push({ name: '카운터', min: [-width / 2, -0.9, 0.06 - depth / 2], max: [width / 2, 0, 0.06 + depth / 2] }, { name: '벽', min: [-4, -1, -0.6], max: [4, 3, -0.33] });
+    const table = this.definition.layout?.pickupTable;
+    if (table) {
+      // pickup table in front of the robot (robot cafe): the customer takes the drink here
+      const [tw, td] = table.size ?? [0.6, 0.36];
+      const wood = new THREE.MeshStandardMaterial({ color: 0xece7df, roughness: 0.5 });
+      const topMesh = new THREE.Mesh(new RoundedBoxGeometry(tw, 0.035, td, 2, 0.008), wood);
+      topMesh.position.set(p[0], -0.0175, p[2]);
+      topMesh.castShadow = topMesh.receiveShadow = true;
+      s.add(topMesh);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x5b5148, metalness: 0.3, roughness: 0.5 });
+      for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.85, 0.035), legMat);
+        leg.position.set(p[0] + sx * (tw / 2 - 0.04), -0.46, p[2] + sz * (td / 2 - 0.04));
+        leg.castShadow = true;
+        s.add(leg);
+      }
+      this.obstacles.push({ name: '픽업 테이블', min: [p[0] - tw / 2, -0.9, p[2] - td / 2], max: [p[0] + tw / 2, 0, p[2] + td / 2] });
+    }
     if (this.definition.layout?.pickupStand) {
       // free-standing pickup stand in front of the counter (robot cafe)
       const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.89, 24), new THREE.MeshStandardMaterial({ color: 0x8a7a68, metalness: 0.2, roughness: 0.6 }));
@@ -155,6 +175,10 @@ export class Stage {
       for (const [name, v] of Object.entries(model.slots ?? {})) this.slotPos.set(`${u.device}:${name}`, model.group.localToWorld(v.clone()));
       if (u.payment && model.anchors?.card) this.slotPos.set(`${u.payment}:slot`, model.group.localToWorld(model.anchors.card.clone()));
       for (const p of model.pickables ?? []) p.object.userData.pick = { ...p, unit: u };
+      for (const o of model.obstacles ?? []) {
+        const at = (v) => v.map((x, i) => x + u.position[i]);
+        this.obstacles.push({ name: o.name, min: at(o.min), max: at(o.max) });
+      }
       this.units.push({ ...u, model });
     }
   }
@@ -309,7 +333,7 @@ export class Stage {
       ice: { pos: [pos(ice).x, 0.34, 0.92], target: [pos(ice).x, 0.25, 0.1] },
       cups: { pos: [pos(cup).x, 0.3, 0.98], target: [pos(cup).x, 0.25, 0.1] },
       top: { pos: [m.x + 0.3, 1.9, 0.9], target: [m.x + 0.3, 0.2, 0.05] },
-      robot: { pos: [m.x + 1.6, 0.9, 2.0], target: [m.x + 0.4, 0.15, 0.35] },
+      robot: { pos: [m.x + 1.9, 1.05, 2.25], target: [m.x + 0.45, 0.1, 0.45] },
       find,
     };
   }
@@ -377,6 +401,7 @@ export class Stage {
     this.controls.update();
     this.cups.tick(dt);
     if (this.robot) {
+      this.robot.frame?.();
       for (const v of this.cups.views.values()) if (v.slot === 'robot:gripper') v.group.position.copy(this.robot.carriedCupPosition(v.type));
     }
 

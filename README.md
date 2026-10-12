@@ -251,7 +251,8 @@ GET  https://cafesim.samdori93.workers.dev/kscat?room=main&REQ=...&callback=cb
 
 ### 3-4. 로봇 카페 시연 (studyUR 연동)
 
-뷰어 상단 **🤖 로봇 카페 시연** (또는 `/?platform=m400-robot`). 주문 키오스크 팝업에서 주문하면 **UR5e**가 컵을 컵 디스펜서 → 제빙기 → 투출구 → 픽업대로 옮깁니다.
+뷰어 상단 **🤖 로봇 카페 시연** (또는 `/?platform=m400-robot`). 주문 키오스크 팝업에서 주문하면 **UR5e**가 컵을 컵 디스펜서 → 제빙기 → 투출구 → 로봇 앞 픽업 테이블로 옮깁니다.
+컵은 옆에서(수평) 컵 지름에 맞춘 그리퍼 폭으로 잡고, 모든 경로는 로봇 링크 캡슐 ↔ 장비 박스 충돌 검사를 거쳐 충돌하면 우회 경로로 다시 계획합니다.
 로봇 경로는 [studyUR](https://github.com/samcho93/studyUR)의 기구학·궤적 계획(`planProgram`, `ikClosest`)으로 만들고 공식 UR 메시로 표시하며, 현재 동작의 URScript를 보여 줍니다. 자세한 내용: [docs/ROBOT-CAFE.md](docs/ROBOT-CAFE.md)
 
 ### 4. 새 플랫폼 만들기
