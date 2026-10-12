@@ -1,6 +1,7 @@
 import net from 'node:net';
 import http from 'node:http';
 import { MainBoardClient, CupClient, IceClient, PaymentClient, Machine } from '@cafesim/core';
+import { connectRemote } from './remote.js';
 
 /**
  * Byte transports with the { write, onData, close } shape used by the core SDK clients.
@@ -67,7 +68,24 @@ export function kscatHttp({ host = '127.0.0.1', port = 27098 } = {}) {
  *   const machine = await connectMachine();                                  // sim on localhost
  *   const machine = await connectMachine({ serial: { main: 'COM1', ice: 'COM2', cup: 'COM3' } }); // real M400
  */
-export async function connectMachine({ host = '127.0.0.1', tcp = { main: 7001, ice: 7002, cup: 7003 }, serial, kscat = { host, port: 27098 }, definition } = {}) {
+export async function connectMachine({ host = '127.0.0.1', tcp = { main: 7001, ice: 7002, cup: 7003 }, serial, kscat = { host, port: 27098 }, url, definition } = {}) {
+  if (url) {
+    // cloud room (Cloudflare) or any bridge endpoint: wss://.../ws?room=main
+    const link = await connectRemote(url);
+    const devs = link.info.devices;
+    const key = (type) => devs.find((d) => d.type === type)?.key;
+    const machine = new Machine({
+      main: key('mailbean-mainboard') && new MainBoardClient(link.openTransport(key('mailbean-mainboard'), 'sdk')),
+      cup: key('cup-dispenser') && new CupClient(link.openTransport(key('cup-dispenser'), 'sdk')),
+      ice: key('ice-maker') && new IceClient(link.openTransport(key('ice-maker'), 'sdk')),
+      pay: key('kscat-terminal') && new PaymentClient((req) => link.pay(key('kscat-terminal'), req)),
+      definition,
+    });
+    machine.link = link;
+    const close = machine.close.bind(machine);
+    machine.close = () => (close(), link.close());
+    return machine;
+  }
   const t = {};
   if (serial) {
     const baud = { main: 38400, ice: 9600, cup: 9600 };

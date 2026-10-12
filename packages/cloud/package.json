@@ -1,0 +1,18 @@
+{
+  "name": "@cafesim/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Workers + Durable Objects deployment: shared virtual M400 rooms with the 3D viewer",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@cafesim/core": "0.1.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  },
+  "license": "MIT"
+}

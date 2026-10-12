@@ -7,3 +7,6 @@ source/
 # local tooling
 .claude/
 # platforms created locally are fine to commit; remove this line's comment to ignore them
+
+# wrangler local state
+.wrangler/

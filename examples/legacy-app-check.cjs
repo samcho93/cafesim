@@ -103,7 +103,7 @@ const step = (msg) => console.log(`\n=== ${msg}`);
   console.log('ok');
 
   await new Promise((r) => setTimeout(r, 2500));
-  const res = await fetch('http://127.0.0.1:8700/api/state').then((r) => r.json());
+  const res = await fetch(`${process.env.CAFESIM_API ?? 'http://127.0.0.1:8700'}/api/state`).then((r) => r.json());
   const done = res.world.served[0] ?? res.world.cups.find((c) => c.slot === 'pickup');
   console.log('\n=== 결과: 완성된 컵', done ? JSON.stringify({ type: done.type, contents: done.contents }) : '(없음 - 서버를 --auto 로 실행했는지 확인)');
   const errors = logs.filter(([ch]) => /error/.test(ch));

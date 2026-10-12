@@ -10,6 +10,7 @@ export { PaymentTerminal } from './devices/PaymentTerminal.js';
 export { World } from './world/World.js';
 export { computeGuide } from './world/Guide.js';
 export { Platform } from './platform/Platform.js';
+export { attachBridge } from './platform/bridge.js';
 export { registerDeviceType, getDeviceType, listDeviceTypes, definePlatform, getPlatformDefinition, listPlatforms } from './platform/registry.js';
 export { MainBoardClient, CupClient, IceClient, PaymentClient, MailbeanClient, buildApprovalTelegram, TimeoutError } from './host/clients.js';
 export { Machine } from './host/Machine.js';

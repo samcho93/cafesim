@@ -1,0 +1,21 @@
+# Cloudflare deployment of cafeSim
+#   npm run build            (viewer -> packages/viewer/dist)
+#   npm run deploy:cf        (wrangler deploy)
+name = "cafesim"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# the 3D viewer; requests that are not files fall through to the worker (/ws, /api, /kscat)
+[assets]
+directory = "../viewer/dist"
+binding = "ASSETS"
+not_found_handling = "none"
+
+# one shared virtual machine per room (?room=name)
+[[durable_objects.bindings]]
+name = "SIM"
+class_name = "SimRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SimRoom"]

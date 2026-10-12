@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { Platform } from '@cafesim/core';
+import { Platform, attachBridge } from '@cafesim/core';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.resolve(here, '../../..');
@@ -137,40 +137,13 @@ export async function startServer(o = {}) {
 
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   wss.on('connection', (ws) => {
-    const send = (m) => ws.readyState === 1 && ws.send(JSON.stringify(m));
-    const conns = new Map();
-    send({ t: 'hello', platform: definition.id, info, snapshot: platform.snapshot() });
-    const offs = [
-      platform.on('log', (e) => send({ t: 'log', e })),
-      platform.on('event', (e) => send({ t: 'event', e })),
-      platform.on('traffic', (e) => send({ t: 'traffic', e: { ...e, bytes: [...e.bytes] } })),
-    ];
-    const timer = setInterval(() => send({ t: 'snap', s: platform.snapshot() }), 100);
-    ws.on('message', async (raw) => {
-      let m;
+    const bridge = attachBridge(platform, (m) => ws.readyState === 1 && ws.send(JSON.stringify(m)), info);
+    ws.on('message', (raw) => {
       try {
-        m = JSON.parse(raw);
-      } catch {
-        return;
-      }
-      try {
-        if (m.t === 'interact') send({ t: 'ack', id: m.id, result: platform.interact(m.action) });
-        else if (m.t === 'open') {
-          const conn = platform.connect(m.device, `ws:${m.conn}`);
-          conn.onData((b) => send({ t: 'rx', conn: m.conn, bytes: [...b] }));
-          conns.set(m.conn, conn);
-        } else if (m.t === 'tx') conns.get(m.conn)?.write(m.bytes);
-        else if (m.t === 'close') conns.get(m.conn)?.close();
-        else if (m.t === 'pay') send({ t: 'payres', id: m.id, res: await platform.device(m.device).request(m.req) });
-      } catch (e) {
-        send({ t: 'error', id: m.id, error: e.message });
-      }
+        bridge.receive(JSON.parse(raw));
+      } catch {}
     });
-    ws.on('close', () => {
-      clearInterval(timer);
-      offs.forEach((f) => f());
-      conns.forEach((c) => c.close());
-    });
+    ws.on('close', () => bridge.close());
   });
 
   const httpPort = o.port ?? 8700;

@@ -17,8 +17,9 @@ async function detectServer() {
   try {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 800);
-    const res = await fetch('./api/info', { signal: ctrl.signal });
-    if (res.ok && res.headers.get('content-type')?.includes('json')) return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+    const room = encodeURIComponent(params.get('room') ?? 'main');
+    const res = await fetch(`./api/info?room=${room}`, { signal: ctrl.signal });
+    if (res.ok && res.headers.get('content-type')?.includes('json')) return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?room=${room}`;
   } catch {}
   return null;
 }
@@ -31,7 +32,7 @@ async function boot() {
     link = await new RemoteLink(serverUrl).connect();
     definition = platforms[link.platformId];
     if (!definition) throw new Error(`서버 플랫폼 "${link.platformId}" 정의를 이 뷰어에서 찾을 수 없습니다 (/platforms)`);
-    $('modeBadge').textContent = 'SERVER';
+    $('modeBadge').textContent = link.info?.cloud ? `CLOUD · ${link.info.room}` : 'SERVER';
     $('modeBadge').classList.add('remote');
     $('modeBadge').title = serverUrl;
     link.on('disconnected', () => toast('시뮬레이터 서버 연결이 끊어졌습니다', 'error'));

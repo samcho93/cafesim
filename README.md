@@ -8,7 +8,12 @@
 - 다른 시스템에서 장비 동작, 키오스크 UI, 결제를 직접 프로그래밍
 - 이 플랫폼을 바탕으로 새 매장 구성(플랫폼) 만들기
 
-**웹 데모:** https://samcho93.github.io/cafesim/ (설치 없이 브라우저에서 실행)
+**웹에서 바로 사용**
+
+| 주소 | 방식 |
+|---|---|
+| https://cafesim.samdori93.workers.dev | **Cloudflare 클라우드 장비**: 여러 사람이 같은 장비 상태를 공유, 외부 프로그램을 WebSocket/REST/릴레이로 연결 (`?room=이름`으로 별도 장비) |
+| https://samcho93.github.io/cafesim/ | 브라우저 내장 시뮬레이터 (각자 독립된 장비) |
 
 ![M400 시뮬레이터](docs/screenshot.jpg)
 
@@ -75,6 +80,8 @@ flowchart LR
 | [`packages/core`](packages/core) | 의존성 없는 시뮬레이션 엔진: 프로토콜 코덱, 가상 장치, 물리 월드, 고객 안내, **호스트 SDK**(`Machine`, `MainBoardClient` …). Node·브라우저 공용 |
 | [`packages/server`](packages/server) | `cafesim` CLI: 장치별 TCP 포트, 가상/실제 COM 포트, KSCAT HTTP 에뮬레이터, REST, WebSocket, 빌드된 뷰어 제공 |
 | [`packages/serialport-shim`](packages/serialport-shim) | `require('serialport')`를 가로채 COM 포트를 시뮬레이터 TCP로 연결 (기존 앱 무수정 연동) |
+| [`packages/cloud`](packages/cloud) | Cloudflare Worker + Durable Object: 룸별 공유 장비, WebSocket 브리지, REST, KSCAT, 뷰어 정적 파일 |
+| [`tools/legacy-kiosk`](tools/legacy-kiosk) | 원본 키오스크 앱 실행 래퍼 (시리얼→시뮬레이터, 창 모드, 업데이트·작업표시줄 차단) |
 | [`packages/viewer`](packages/viewer) | Three.js 3D 뷰어, 운영 패널, 스크립트 콘솔, 기본 키오스크 UI, 키오스크 SDK |
 | [`platforms/m400`](platforms/m400/platform.js) | M400 정의: 장치, 배관 라우팅, 제조 시퀀스, 메뉴, 3D 배치 |
 | [`docs/`](docs) | [프로토콜](docs/PROTOCOL.md), [플랫폼 확장](docs/PLATFORM.md), [하드웨어 분석](docs/HARDWARE.md) |
@@ -169,6 +176,50 @@ POST /api/interact              {"type":"moveCup","cup":"cup1","to":"ice:tray"}
 ```
 
 뷰어 주소에 `?kiosk=http://localhost:3000`을 붙이면 표시됩니다 ([examples/custom-kiosk](examples/custom-kiosk/index.html)).
+
+### 3-1. 원본 키오스크 앱(Electron)을 시뮬레이터로 실행
+
+원본 앱 소스는 그대로 두고, 실행 래퍼가 시리얼 포트를 시뮬레이터로 돌리고 창 모드로 띄웁니다
+(작업표시줄 숨김·자동 업데이트는 끕니다). 메뉴와 설정은 메일빈 서버(`--web`)에서 받습니다.
+
+```bash
+cd source && npm ci --ignore-scripts && node node_modules/electron/install.js && cd ..   # 최초 1회
+npm run kiosk:legacy -- --mac <장비 ID> --web stg                                          # 로컬 시뮬레이터
+npm run kiosk:legacy -- --mac <장비 ID> --web stg --cloud https://cafesim.samdori93.workers.dev/?room=main
+```
+
+`~/settings/settings.json`에 `{MacAddr, webMode}`를 기록합니다 (기존 파일은 `settings.json.cafesim-backup`으로 1회 백업).
+`--cloud`를 쓰면 원본 앱 → 로컬 릴레이 → Cloudflare 장비로 연결되고, 그 URL의 3D 화면에서 동작이 보입니다.
+
+### 3-2. Cloudflare 클라우드 운용
+
+```mermaid
+flowchart LR
+  B["브라우저 3D 뷰어<br/>(여러 명)"] -- "wss /ws?room=main" --> W
+  S["Node SDK<br/>connectMachine({url})"] -- wss --> W
+  R["cafesim relay<br/>(PC: TCP 7001-7003, KSCAT 27098)"] -- wss --> W
+  K["원본 키오스크 앱"] -- "COM→TCP / HTTP" --> R
+  W["Worker"] --> DO["Durable Object<br/>room = 장비 1대<br/>@cafesim/core"]
+```
+
+- 장비 상태는 룸마다 Durable Object 하나가 들고 있으며, 접속자가 없으면 5분 뒤 시뮬레이션을 멈춥니다 (재접속 시 이어서 진행, 장시간 비활성 시 초기화).
+- Cloudflare는 외부 TCP 포트를 열 수 없어서 바이트 프로토콜은 WebSocket으로 전달합니다. 기존 TCP/COM 방식이 필요한 프로그램은 **릴레이**를 씁니다.
+
+```bash
+npm run relay -- https://cafesim.samdori93.workers.dev/?room=main      # PC에 7001-7003, 27098 개방
+```
+
+```js
+const machine = await connectMachine({ url: 'wss://cafesim.samdori93.workers.dev/ws?room=main', definition });
+```
+
+```
+GET  https://cafesim.samdori93.workers.dev/api/state?room=main
+POST https://cafesim.samdori93.workers.dev/api/interact?room=main   {"type":"autoAssist","on":true}
+GET  https://cafesim.samdori93.workers.dev/kscat?room=main&REQ=...&callback=cb
+```
+
+배포: `npx wrangler login` 후 `npm run deploy:cf` (뷰어 빌드 + `packages/cloud` 배포). 로컬 확인은 `npm run cf:dev`.
 
 ### 4. 새 플랫폼 만들기
 

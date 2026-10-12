@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { startServer, createPlatform } from '../src/index.js';
+import { startServer, createPlatform, startRelay } from '../src/index.js';
 
 const [, , command = 'help', ...rest] = process.argv;
 
@@ -23,6 +23,7 @@ const HELP = `cafesim - M400 virtual hardware
 Usage
   cafesim start [options]               run the simulator service
   cafesim create-platform <name>        copy a platform as a starting point (--from m400 --title "이름")
+  cafesim relay <wss://.../ws?room=x>   expose a cloud (Cloudflare) room locally on TCP 7001-7003 + KSCAT 27098
 
 start options
   --platform <id|file>    platform id in /platforms or a platform.js path   (default m400)
@@ -56,6 +57,21 @@ if (command === 'start') {
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+} else if (command === 'relay') {
+  const a = parseArgs(rest);
+  let url = a._[0];
+  if (!url) {
+    console.error('Usage: cafesim relay <wss://cafesim.<you>.workers.dev/ws?room=main> [--tcp-offset n] [--kscat port]');
+    process.exit(1);
+  }
+  if (/^https?:/.test(url)) url = url.replace(/^http/, 'ws');
+  if (!/\/ws(\?|$)/.test(url)) {
+    const u = new URL(url);
+    url = `${u.protocol}//${u.host}/ws?room=${u.searchParams.get('room') ?? 'main'}`;
+  }
+  const relay = await startRelay(url, { tcpOffset: a['tcp-offset'] ? Number(a['tcp-offset']) : 0, kscat: a.kscat === 'false' ? 0 : a.kscat ? Number(a.kscat) : 27098 });
+  process.on('SIGINT', () => (relay.close(), process.exit(0)));
+  relay.link.on('close', () => process.exit(2));
 } else if (command === 'create-platform') {
   const a = parseArgs(rest);
   const name = a._[0];

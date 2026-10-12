@@ -15,7 +15,11 @@
     "sim:watch": "node --watch-path=packages/core/src --watch-path=platforms packages/server/bin/cafesim.js start",
     "test": "node --test \"packages/*/test/*.test.js\"",
     "example:order": "node examples/node-order.js",
-    "create-platform": "node packages/server/bin/cafesim.js create-platform"
+    "create-platform": "node packages/server/bin/cafesim.js create-platform",
+    "kiosk:legacy": "node tools/legacy-kiosk/run.cjs",
+    "relay": "node packages/server/bin/cafesim.js relay",
+    "cf:dev": "npm run build && npm run dev -w @cafesim/cloud",
+    "deploy:cf": "npm run build && npm run deploy -w @cafesim/cloud"
   },
   "engines": {
     "node": ">=18"
