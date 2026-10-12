@@ -161,7 +161,7 @@ export class MainBoard extends Device {
     const r = this.recipe;
     const op = { key, s, m: cmd.m, label: cmd.label, elapsed: 0, duration: 1.5, tick: null, done: null, error: null };
     const n = Number(key.slice(-1));
-    const outletForCoffee = () => this.options.routing.coffee[this.actuators.selectOutlet ? 1 : 0];
+    const outletForCoffee = () => this.#outlet('coffee');
 
     switch (key) {
       case 'grinder1':
@@ -220,7 +220,7 @@ export class MainBoard extends Device {
         op.actuator = 'mainPump';
         op.tick = (dt) => {
           if (!this.#water(dt * FLOW.hotWater)) return (op.error = 89);
-          this.#pour(this.options.routing.hotWater, 'water', dt * FLOW.hotWater);
+          this.#pour(this.#outlet('hotWater'), 'water', dt * FLOW.hotWater);
           this.temps.hotWater -= dt * FLOW.hotWater * 0.02;
         };
         break;
@@ -247,7 +247,7 @@ export class MainBoard extends Device {
           if (cc > 0) {
             if (!this.#water(cc)) return (op.error = 89);
             op.poured = (op.poured ?? 0) + cc;
-            this.#pour(this.options.routing.powder[i], 'powder', cc, n);
+            this.#pour(this.#outlet('powder', n), 'powder', cc, n);
           }
         };
         op.done = () => (this.actuators[`feeder${n}`] = false);
@@ -262,7 +262,7 @@ export class MainBoard extends Device {
         op.duration = Math.max(water / FLOW.ade, pump, 0.5);
         op.actuator = `adePump${n}`;
         op.tick = (dt) => {
-          const spout = this.options.routing.ade[i];
+          const spout = this.#outlet('ade', n);
           const syrup = Math.min(this.stock.ade[i], dt * FLOW.syrup, pump * FLOW.syrup - (op.syrup ?? 0));
           if (syrup > 0) {
             if (this.stock.ade[i] <= 0) return (op.error = 101 + i);
@@ -343,6 +343,25 @@ export class MainBoard extends Device {
     return true;
   }
 
+  /**
+   * Outlet for a liquid path. With options.followLamp the outlet whose lamp the host lit
+   * (S165..S167, the kiosk lights the menu's gds_spout_num) receives the drink, otherwise the
+   * static routing table is used.
+   */
+  #outlet(path, n = 1) {
+    if (this.options.followLamp) {
+      const lit = this.lamps.findIndex((l) => l === 1);
+      const blink = this.lamps.findIndex((l) => l === 2);
+      const i = lit >= 0 ? lit : blink;
+      if (i >= 0) return i + 1;
+    }
+    const r = this.options.routing;
+    if (path === 'coffee') return r.coffee[this.actuators.selectOutlet ? 1 : 0];
+    if (path === 'hotWater') return r.hotWater;
+    if (path === 'ade') return r.ade[n - 1];
+    return r.powder[n - 1];
+  }
+
   #pour(spout, kind, cc, sub) {
     this.flowCount = (this.flowCount + Math.round(cc * 2)) % 10000;
     const slot = `${this.key}:spout${spout}`;
@@ -419,12 +438,16 @@ export class MainBoard extends Device {
 
     // manual mode water paths (cleaning / service)
     if (this.actuators.mainPump && !this.ops.size && this.#water(0)) {
+      // one water path at a time: powder mixer > ade line > hot water line, coffee line separately
       const a = this.actuators;
+      const r = this.options.routing;
       const cc = dt * FLOW.manual;
-      if (a.solCoffee1 || a.solCoffee2) this.#pour(this.options.routing.coffee[a.selectOutlet ? 1 : 0], 'water', cc);
-      if (a.solHotWater1 || a.solHotWater2 || a.solHotWater3) this.#pour(this.options.routing.hotWater, 'water', cc);
-      for (let n = 1; n <= 6; n++) if (a[`solPowder${n}`]) this.#pour(this.options.routing.powder[n - 1], 'water', cc);
-      for (let n = 1; n <= 3; n++) if (a[`solAde${n}`] || (n === 1 && a.solAdeHotWater)) this.#pour(this.options.routing.ade[n - 1], 'water', cc);
+      if (a.solCoffee1 || a.solCoffee2) this.#pour(r.coffee[a.selectOutlet ? 1 : 0], 'water', cc);
+      const powder = [1, 2, 3, 4, 5, 6].find((n) => a[`solPowder${n}`]);
+      const ade = [1, 2, 3].find((n) => a[`solAde${n}`]) ?? (a.solAdeHotWater ? 1 : null);
+      if (powder) this.#pour(r.powder[powder - 1], 'water', cc);
+      else if (ade) this.#pour(r.ade[ade - 1], 'water', cc);
+      else if (a.solHotWater1 || a.solHotWater2 || a.solHotWater3) this.#pour(r.hotWater, 'water', cc);
       this.#water(cc);
     }
 

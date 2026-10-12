@@ -36,6 +36,8 @@ start options
   --kscat <port|false>    KSCAT agent emulator port                         (default 27098)
   --speed <x>             simulation speed                                  (default 1)
   --auto                  auto-assist: perform the customer actions automatically
+  --data <file|false>     virtual Mailbean server data (menus, settings, payments)
+                          default .cafesim-data/backend-<platform>.json
 `;
 
 if (command === 'start') {
@@ -50,6 +52,7 @@ if (command === 'start') {
     kscat: a.kscat === 'false' ? false : a.kscat ? Number(a.kscat) : undefined,
     speed: a.speed ? Number(a.speed) : 1,
     autoAssist: !!a.auto,
+    data: a.data === 'false' ? false : a.data,
   });
   const stop = async () => {
     await srv.close();

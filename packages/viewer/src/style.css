@@ -533,3 +533,300 @@ a {
     padding: 4px 7px;
   }
 }
+
+/* ------------------------------------------------------------------ admin console (virtual Mailbean server) */
+.console-btn {
+  background: #1d1f22;
+  color: #fff;
+  border-color: #1d1f22;
+  font-weight: 700;
+}
+.console-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(10, 12, 16, 0.55);
+  display: flex;
+  padding: 2vh 2vw;
+}
+.console-overlay[hidden] {
+  display: none;
+}
+.adm-console {
+  flex: 1;
+  background: var(--panel);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.console-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.console-head b {
+  font-size: 16px;
+}
+.console-close {
+  margin-left: auto;
+}
+.console-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+.console-tabs button {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 10px 12px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.console-tabs button.active {
+  color: var(--text);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+.console-body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px;
+  min-height: 0;
+}
+.console-body h4 {
+  margin: 16px 0 6px;
+}
+.split {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) 1.3fr;
+  gap: 16px;
+  align-items: start;
+}
+.list-pane {
+  overflow: auto;
+}
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.grid th,
+table.grid td {
+  border-bottom: 1px solid var(--line);
+  padding: 5px 6px;
+  text-align: left;
+  vertical-align: middle;
+}
+table.grid th {
+  color: var(--muted);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+table.grid tr[data-gid] {
+  cursor: pointer;
+}
+table.grid tr.sel td {
+  background: #fff3e6;
+}
+table.grid input {
+  width: 100%;
+  min-width: 60px;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+}
+table.grid.narrow {
+  max-width: 640px;
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.st-sold_out {
+  color: var(--err);
+}
+.st-not_displayed,
+.st-deleted {
+  color: var(--muted);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 12px;
+}
+.form-grid label,
+.kv-form > label,
+.recipe-groups label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.form-grid input,
+.form-grid select,
+.kv-form input,
+.kv-form select,
+.recipe-groups input {
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+.kv-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 14px;
+  align-items: end;
+}
+.kv-form > h4,
+.kv-form > .form-grid,
+.kv-form > .btn-row,
+.kv-form > .field-row,
+.kv-form > p {
+  grid-column: 1 / -1;
+}
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  margin: 10px 0;
+}
+.chk {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 4px;
+  color: var(--text) !important;
+}
+.seq-box {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  margin: 10px 0;
+  background: var(--panel-2);
+}
+.seq {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+  min-height: 26px;
+}
+.seq-chip {
+  background: #1d1f22;
+  color: #fff;
+  border-color: #1d1f22;
+  padding: 3px 9px;
+}
+.seq-chip a {
+  cursor: pointer;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+.seq-box .btn-row button {
+  font-size: 11px;
+  padding: 3px 7px;
+}
+.recipe-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+}
+.recipe-groups fieldset {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px 10px;
+  opacity: 0.55;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.recipe-groups fieldset.used {
+  opacity: 1;
+  border-color: var(--accent-2);
+}
+.recipe-groups label.hl {
+  color: var(--accent-2);
+  font-weight: 700;
+}
+.btn-row.sticky {
+  position: sticky;
+  bottom: -14px;
+  background: var(--panel);
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+}
+button.danger {
+  color: var(--err);
+  border-color: #f2b3ac;
+}
+.remote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+.remote-grid fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.remote-grid input,
+.remote-grid select,
+.console-body > .btn-row input {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.file-btn {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+  .console-overlay {
+    padding: 0;
+  }
+  .adm-console {
+    border-radius: 0;
+  }
+}
+
+.recipe-groups input,
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  min-width: 0;
+}
+.edit-pane,
+.list-pane {
+  min-width: 0;
+}

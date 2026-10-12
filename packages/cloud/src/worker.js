@@ -10,7 +10,7 @@
  * Each room is a Durable Object holding one running Platform. It keeps simulating while
  * someone is connected and pauses after IDLE_MS without clients.
  */
-import { Platform, attachBridge } from '@cafesim/core';
+import { Platform, attachBridge, MailbeanBackend, isBackendPath, handleBackendHttp, subscribeNotifications, attachRemoteExecutor } from '@cafesim/core';
 import m400 from '../../../platforms/m400/platform.js';
 
 const PLATFORMS = { [m400.id]: m400 };
@@ -58,9 +58,36 @@ export class SimRoom {
     return { cloud: true, room: this.room, platform: this.platform.definition.id, clients: this.clients.size, devices: this.platform.definition.devices.map(({ key, type, port }) => ({ key, type, port })) };
   }
 
+  async backendFor() {
+    if (!this.backend) {
+      const saved = await this.state.storage.get('backend');
+      this.backend = new MailbeanBackend({ state: saved ?? undefined, save: (st) => this.state.storage.put('backend', st) });
+      if (!saved) await this.state.storage.put('backend', this.backend.state);
+      this.executor = attachRemoteExecutor(this.platform, this.backend);
+    }
+    return this.backend;
+  }
+
   async fetch(request) {
     const url = new URL(request.url);
     const platform = this.ensure(url);
+
+    if (url.pathname.startsWith('/notifications/')) {
+      const backend = await this.backendFor();
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const enc = new TextEncoder();
+      let off = () => {};
+      const write = (chunk) => writer.write(enc.encode(chunk)).catch(() => off());
+      off = subscribeNotifications(backend, write);
+      writer.closed.catch(() => off());
+      return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', 'access-control-allow-origin': '*' } });
+    }
+    if (isBackendPath(url.pathname)) {
+      const backend = await this.backendFor();
+      const r = await handleBackendHttp(backend, { method: request.method, pathname: url.pathname, query: Object.fromEntries(url.searchParams), bodyText: request.method === 'GET' ? '' : await request.text(), contentType: request.headers.get('content-type') ?? '' });
+      return new Response(r.status === 204 ? null : r.body, { status: r.status, headers: r.headers });
+    }
 
     if (url.pathname === '/ws') {
       if (request.headers.get('upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
@@ -115,7 +142,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET,POST,OPTIONS' } });
-    if (url.pathname === '/ws' || url.pathname.startsWith('/api/') || url.pathname === '/kscat') {
+    if (url.pathname === '/ws' || url.pathname.startsWith('/api/') || url.pathname === '/kscat' || isBackendPath(url.pathname)) {
       const room = (url.searchParams.get('room') ?? 'main').slice(0, 64);
       const stub = env.SIM.get(env.SIM.idFromName(room));
       return stub.fetch(request);

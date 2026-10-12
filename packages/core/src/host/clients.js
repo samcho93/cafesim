@@ -326,6 +326,30 @@ export function buildApprovalTelegram(amount, tid = 'DPT0TEST03') {
   return 'AP' + String(m.length).padStart(4, '0') + m;
 }
 
+const pad = (v, n, c = ' ') => String(v ?? '').padEnd(n, c).slice(0, n);
+const STX = String.fromCharCode(2);
+const ETX = String.fromCharCode(3);
+const FS = String.fromCharCode(28);
+const CR = String.fromCharCode(13);
+
+/** Kakao Pay (PC) / Naver Pay (MI) barcode approval, like KPApprInq / KSCatNPReq. */
+export function buildBarcodeTelegram(trade, amount, barcode, tid = 'DPT0TEST03') {
+  const amountOrg = Math.floor((amount / 11) * 10);
+  let m = STX + trade + (trade === 'PC' ? '02' : '01') + '0200' + 'N' + pad(tid, 10) + '    ' + '000000000000' + (trade === 'PC' ? 'B' : 'Q') + ' '.repeat(20) + pad(barcode, 40);
+  m += FS + '00' + String(amount).padStart(12, '0') + '000000000000' + String(amount - amountOrg).padStart(12, '0') + String(amountOrg).padStart(12, '0') + '000000000000';
+  m += ' '.repeat(200) + 'N' + ETX + CR;
+  return 'AP' + String(m.length).padStart(4, '0') + m;
+}
+
+/** Card / barcode cancel (KSCatCanc, KPCancInq, KSCatNPCanc): telegram 0420 with the original approval. */
+export function buildCancelTelegram({ trade = 'IC', amount = 0, approvalNo = '', tradeTime = '', tid = 'DPT0TEST03' }) {
+  const amountOrg = Math.floor((amount / 11) * 10);
+  let m = STX + trade + '01' + '0420' + 'N' + pad(tid, 10) + '    ' + '000000000000' + ' '.repeat(97);
+  m += FS + '00' + String(amount).padStart(12, '0') + '000000000000' + String(amount - amountOrg).padStart(12, '0') + String(amountOrg).padStart(12, '0') + '000000000000';
+  m += '  ' + ' '.repeat(16) + pad(approvalNo, 12) + pad(String(tradeTime).slice(0, 6), 6) + ' '.repeat(163) + 'X' + ETX + CR;
+  return 'AP' + String(m.length).padStart(4, '0') + m;
+}
+
 export class PaymentClient {
   /** @param send (telegram:string) => Promise<object>  e.g. terminal.request.bind(terminal) or an HTTP call */
   constructor(send, { tid = 'DPT0TEST03' } = {}) {
@@ -337,6 +361,16 @@ export class PaymentClient {
     const res = await this.send(buildApprovalTelegram(amount, this.tid));
     if (res.RES !== '0000') throw Object.assign(new Error(res.MSG || res.MESSAGE1 || '결제 실패'), { response: res });
     return res;
+  }
+
+  async approveBarcode(trade, amount, barcode) {
+    const res = await this.send(buildBarcodeTelegram(trade, amount, barcode, this.tid));
+    if (res.RES !== '0000') throw Object.assign(new Error(res.MSG || '결제 실패'), { response: res });
+    return res;
+  }
+
+  async cancel(opts) {
+    return this.send(buildCancelTelegram({ tid: this.tid, ...opts }));
   }
 
   /** Wait until the card has been taken out of the reader. */

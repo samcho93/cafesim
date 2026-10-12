@@ -7,6 +7,7 @@
 - 기존 키오스크 앱을 코드 수정 없이 가상 하드웨어에 연결
 - 다른 시스템에서 장비 동작, 키오스크 UI, 결제를 직접 프로그래밍
 - 이 플랫폼을 바탕으로 새 매장 구성(플랫폼) 만들기
+- **원본 키오스크의 모든 기능 확인**: 가상 메일빈 서버(메뉴·레시피·매장·장비 설정, 결제, 포인트, 재고, 원격 명령)와 관리 콘솔, 원본 흐름을 옮긴 웹 키오스크 ([기능 표](docs/KIOSK-FEATURES.md))
 
 **웹에서 바로 사용**
 
@@ -32,11 +33,13 @@ npm install
 npm run dev          # 3D 시뮬레이터: http://localhost:5173
 ```
 
-1. 터치스크린에서 메뉴를 고르고 **결제하기**를 누릅니다.
+1. 터치스크린에서 메뉴를 고르고 **결제하기**를 누릅니다 (개인컵·포인트 질문 → 결제 수단 선택: 카드·삼성페이·카카오페이·네이버페이).
 2. 커피머신의 **카드 단말기를 클릭**해 카드를 넣습니다.
 3. 상단 안내를 따라 **컵 클릭 → 파란 원 클릭**으로 컵을 옮깁니다 (컵 디스펜서 → 제빙기 → 투출구 → 픽업대).
    - 상단 **자동 진행**을 켜면 고객 동작을 자동으로 수행하고, 안내창의 **대신 하기**는 한 단계만 수행합니다.
 4. **내부 보기**를 켜면 그라인더, 브루 유닛(브로멕), 보일러, 펌프, 파우더 캐니스터가 동작하는 모습이 보입니다.
+5. 키오스크 우측 상단 로고를 6번 누르고 비밀번호 `1234`를 넣으면 **관리자 모드**(재고·세척·테스트 모드·메뉴 관리·기기 설정·컵 리필·제빙기 초기화)가 열립니다.
+6. 상단 **⚙ 관리 콘솔**은 메일빈 서버 역할입니다: 메뉴·레시피·매장·장비 설정, 결제·환불, 원격 제어.
 
 오른쪽 패널
 
@@ -84,7 +87,7 @@ flowchart LR
 | [`tools/legacy-kiosk`](tools/legacy-kiosk) | 원본 키오스크 앱 실행 래퍼 (시리얼→시뮬레이터, 창 모드, 업데이트·작업표시줄 차단) |
 | [`packages/viewer`](packages/viewer) | Three.js 3D 뷰어, 운영 패널, 스크립트 콘솔, 기본 키오스크 UI, 키오스크 SDK |
 | [`platforms/m400`](platforms/m400/platform.js) | M400 정의: 장치, 배관 라우팅, 제조 시퀀스, 메뉴, 3D 배치 |
-| [`docs/`](docs) | [프로토콜](docs/PROTOCOL.md), [플랫폼 확장](docs/PLATFORM.md), [하드웨어 분석](docs/HARDWARE.md) |
+| [`docs/`](docs) | [원본 기능 ↔ 시뮬레이터](docs/KIOSK-FEATURES.md), [프로토콜](docs/PROTOCOL.md), [플랫폼 확장](docs/PLATFORM.md), [하드웨어 분석](docs/HARDWARE.md) |
 
 ---
 
@@ -179,19 +182,41 @@ POST /api/interact              {"type":"moveCup","cup":"cup1","to":"ice:tray"}
 
 ### 3-1. 원본 키오스크 앱(Electron)을 시뮬레이터로 실행
 
-원본 앱 소스는 그대로 두고, 실행 래퍼가 시리얼 포트를 시뮬레이터로 돌리고 창 모드로 띄웁니다
-(작업표시줄 숨김·자동 업데이트는 끕니다). 메뉴와 설정은 메일빈 서버(`--web`)에서 받습니다.
+원본 앱 소스는 그대로 두고, 실행 래퍼가 시리얼 포트를 가상 하드웨어로, `*.mailbean.kr` 서버 호출을 **가상 메일빈 서버**로 돌립니다.
+장비 ID나 실제 서버 계정 없이 메뉴·결제·포인트·재고·관리자 모드·원격 명령까지 원본 앱의 모든 기능을 실행해 볼 수 있습니다
+(창 모드, 작업표시줄 숨김·자동 업데이트·원격 재부팅·알림톡 실제 발송은 막습니다).
 
 ```bash
 cd source && npm ci --ignore-scripts && node node_modules/electron/install.js && cd ..   # 최초 1회
-npm run kiosk:legacy -- --mac <장비 ID> --web stg                                          # 로컬 시뮬레이터
-npm run kiosk:legacy -- --mac <장비 ID> --web stg --cloud https://cafesim.samdori93.workers.dev/?room=main
+npm run kiosk:legacy                                                                     # 가상 하드웨어 + 가상 메일빈 서버
+npm run kiosk:legacy -- --cloud https://cafesim.samdori93.workers.dev/?room=main         # Cloudflare 룸에 연결
+npm run kiosk:legacy -- --real --mac <장비 ID> --web stg                                 # 실제 메일빈 서버 사용
 ```
 
+메뉴·설정은 http://localhost:8700 (또는 클라우드 URL)의 `⚙ 관리 콘솔`에서 바꾸고 원본 앱을 재시작하면 반영됩니다.
+`--debug-port 9222`를 붙이면 Chrome DevTools로 원본 앱 화면을 검사할 수 있습니다.
 `~/settings/settings.json`에 `{MacAddr, webMode}`를 기록합니다 (기존 파일은 `settings.json.cafesim-backup`으로 1회 백업).
-`--cloud`를 쓰면 원본 앱 → 로컬 릴레이 → Cloudflare 장비로 연결되고, 그 URL의 3D 화면에서 동작이 보입니다.
 
-### 3-2. Cloudflare 클라우드 운용
+### 3-2. 가상 메일빈 서버와 관리 콘솔
+
+원본 키오스크가 쓰는 서버 API(`get_settings`, `goods_list`, `store_detail_list`, `ingredient_list`, `consume_ingr`, `payment_data_insert`,
+`check_cust_tel`, `check_rfid_card_uid`, `refund_success` …)와 SSE 원격 명령(`/notifications/{mac}/`)을 시뮬레이터가 제공합니다.
+뷰어 상단 **⚙ 관리 콘솔**에서 실제 서버처럼 운영합니다.
+
+| 탭 | 내용 |
+|---|---|
+| 메뉴·레시피 | 메뉴 추가/복제/삭제, 가격·상태·투출구·태그·카테고리, **제조 순서(dataCodes) 편집**, 코드별 레시피 값, ▶ 제조 테스트 |
+| 카테고리 / 매장 설정 | 표시 순서, 테마, 개인컵 할인, 자동 세척·품절·리필, 포인트, 장바구니 최대, 대기 화면 |
+| 장비 설정 | 관리자 비밀번호, 결제 모드, RFID, TID, 세척 시간, 보일러 온도, 장치 사용 여부 |
+| 재고 | 현재/최대/알림 %, 1초당 소모량, 채우기 |
+| 고객·포인트·RFID / 결제·환불 | 회원 포인트, RFID 카드, 결제 내역·영수증·환불 요청 |
+| 원격 제어 | 원격 세척·컵·출빙·제조·재고 갱신·재시작·로그 업로드 |
+| 알림·데이터 | 알림톡(가상) 로그, 장비 버전, 내보내기/가져오기/초기화 |
+
+데이터는 로컬 서버는 `.cafesim-data/`, 브라우저 모드는 localStorage, Cloudflare는 Durable Object 저장소에 보관됩니다.
+원격 명령은 웹 키오스크(브라우저 모드) 또는 서버의 가상 키오스크가 실행하고, 원본 앱을 연결하면 원본 앱이 실행합니다.
+
+### 3-3. Cloudflare 클라우드 운용
 
 ```mermaid
 flowchart LR

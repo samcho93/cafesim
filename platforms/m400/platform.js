@@ -24,8 +24,11 @@ export default definePlatform({
       options: {
         id: '01',
         spouts: 3,
-        // which outlet each liquid path ends at. coffee: [default, with S155 select solenoid]
-        routing: { coffee: [1, 2], hotWater: 1, ade: [2, 3, 3], powder: [2, 2, 2, 3, 3, 3] },
+        // the drink comes out at the outlet whose lamp the kiosk lit (gds_spout_num)
+        followLamp: true,
+        // without a lit lamp (manual / cleaning): which outlet each liquid path ends at.
+        // coffee: [default, with S155 select solenoid]
+        routing: { coffee: [1, 2], hotWater: 1, ade: [2, 2, 2], powder: [2, 2, 2, 2, 2, 2] },
       },
     },
     { key: 'ice', type: 'ice-maker', port: { path: 'COM2', baudRate: 9600, tcp: 7002 } },

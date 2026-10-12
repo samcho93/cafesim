@@ -10,3 +10,4 @@ source/
 
 # wrangler local state
 .wrangler/
+.cafesim-data/

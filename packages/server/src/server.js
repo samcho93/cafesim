@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { Platform, attachBridge } from '@cafesim/core';
+import { Platform, attachBridge, MailbeanBackend, isBackendPath, handleBackendHttp, subscribeNotifications, attachRemoteExecutor } from '@cafesim/core';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.resolve(here, '../../..');
@@ -36,6 +36,26 @@ export async function startServer(o = {}) {
   const log = o.log ?? ((...a) => console.log('[cafesim]', ...a));
   const closers = [];
   const info = { platform: definition.id, http: null, tcp: {}, serial: {}, kscat: null };
+
+  // ---------------------------------------------------------------- virtual Mailbean cloud (menus, settings, payments, SSE)
+  const dataFile = o.data === false ? null : path.resolve(o.data ?? path.join(repoRoot, '.cafesim-data', `backend-${definition.id}.json`));
+  let saved = null;
+  if (dataFile && fs.existsSync(dataFile)) {
+    try {
+      saved = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+    } catch {}
+  }
+  const backend = new MailbeanBackend({
+    state: saved ?? undefined,
+    save: (state) => {
+      if (!dataFile) return;
+      fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+      fs.writeFileSync(dataFile, JSON.stringify(state, null, 1));
+    },
+  });
+  if (!saved) backend.save(backend.state);
+  const executor = attachRemoteExecutor(platform, backend);
+  closers.push(() => executor.close());
 
   // ---------------------------------------------------------------- TCP ports per serial device
   if (o.tcp !== false) {
@@ -113,6 +133,17 @@ export async function startServer(o = {}) {
     res.setHeader('access-control-allow-origin', '*');
     res.setHeader('access-control-allow-headers', 'content-type');
     if (req.method === 'OPTIONS') return res.end();
+    if (url.pathname.startsWith('/notifications/')) {
+      res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive', 'access-control-allow-origin': '*' });
+      const off = subscribeNotifications(backend, (chunk) => res.write(chunk));
+      req.on('close', off);
+      return;
+    }
+    if (isBackendPath(url.pathname)) {
+      const r = await handleBackendHttp(backend, { method: req.method, pathname: url.pathname, query: Object.fromEntries(url.searchParams), bodyText: await readBody(req), contentType: req.headers['content-type'] ?? '' });
+      res.writeHead(r.status, r.headers);
+      return res.end(r.body);
+    }
     if (url.pathname === '/api/state') return json(res, platform.snapshot());
     if (url.pathname === '/api/info') return json(res, { ...info, definition: { id: definition.id, name: definition.name, devices: definition.devices } });
     if (url.pathname === '/api/interact' && req.method === 'POST') {
@@ -157,8 +188,11 @@ export async function startServer(o = {}) {
   for (const [k, p] of Object.entries(info.serial)) log(`device ${k.padEnd(5)} ${p}`);
   if (info.kscat) log(`KSCAT emulator            http://127.0.0.1:${info.kscat}`);
 
+  if (dataFile) log(`Mailbean 가상 서버          http://localhost:${httpPort}/mailbean/  (데이터 ${dataFile})`);
+
   return {
     platform,
+    backend,
     info,
     async close() {
       platform.stop();

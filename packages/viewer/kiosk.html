@@ -6,45 +6,40 @@
     <title>M400 Kiosk</title>
     <link rel="stylesheet" href="./src/kiosk/kiosk.css" />
   </head>
-  <body>
+  <body data-theme="light">
     <div id="app">
       <header class="k-head">
-        <div class="k-logo"><span class="bean"></span>SELF CAFE <small>M400</small></div>
         <nav id="cats" class="k-cats"></nav>
-        <div id="clock" class="k-clock"></div>
+        <div id="brand" class="k-brand" title="관리자 모드: 6번 연속 터치"></div>
       </header>
       <main class="k-main">
-        <section id="grid" class="k-grid"></section>
+        <section class="k-goods">
+          <div id="grid" class="k-grid"></div>
+          <div id="dots" class="k-dots"></div>
+        </section>
         <aside class="k-cart">
-          <h2>주문 내역</h2>
+          <div class="k-cart-head"><h2>주문 내역</h2><span id="cartCount">0개</span></div>
           <ul id="cartList"></ul>
           <div class="k-total"><span>합계</span><b id="total">0원</b></div>
-          <button id="payBtn" class="k-pay" disabled>결제하기</button>
-          <button id="clearBtn" class="k-clear">전체 취소</button>
+          <div class="k-cart-btns"><button id="clearBtn" class="k-clear">전체삭제</button><button id="payBtn" class="k-pay">결제하기</button></div>
         </aside>
       </main>
+      <footer class="k-foot">
+        <span id="footCups"></span><span id="footTemps"></span><span id="footVer"></span><span id="footTest" class="k-test" hidden>테스트 모드</span>
+        <span class="k-foot-r"><button id="voiceBtn" title="음성 안내">🔊</button><span id="clock"></span></span>
+      </footer>
     </div>
 
-    <div id="optModal" class="k-modal" hidden>
-      <div class="k-sheet">
-        <div class="k-opt-cup" id="optCup"></div>
-        <h3 id="optName"></h3>
-        <p id="optPrice"></p>
-        <div class="k-temps" id="optTemps"></div>
-        <div class="k-actions"><button id="optCancel">취소</button><button id="optAdd" class="primary">담기</button></div>
-      </div>
-    </div>
+    <!-- standby screen (st_standby_screen) -->
+    <div id="standby" class="k-standby" hidden></div>
 
-    <div id="overlay" class="k-overlay" hidden>
-      <div class="k-ov-box">
-        <div id="ovIcon" class="k-ov-icon"></div>
-        <h2 id="ovTitle"></h2>
-        <p id="ovText"></p>
-        <ol id="ovSteps" class="k-steps"></ol>
-        <p id="ovGuide" class="k-guide"></p>
-        <button id="ovCancel" class="k-ov-cancel" hidden>결제 취소</button>
-      </div>
-    </div>
+    <!-- generic modal -->
+    <div id="modal" class="k-modal" hidden><div class="k-sheet" id="modalBody"></div></div>
+
+    <!-- full-screen flows: payment, progress, admin -->
+    <div id="screen" class="k-screen" hidden></div>
+
+    <div id="banner" class="k-banner" hidden></div>
 
     <script src="./cafesim-kiosk-sdk.js"></script>
     <script type="module" src="./src/kiosk/kiosk.js"></script>

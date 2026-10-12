@@ -2,6 +2,8 @@ import { LocalLink, RemoteLink, createMachine } from './link.js';
 import { Stage } from './scene/Stage.js';
 import { Panels } from './ui/panels.js';
 import { KioskBridge } from './kiosk/bridge.js';
+import { createBackendClient } from './backendClient.js';
+import { AdminConsole } from './ui/console.js';
 
 // Every platform folder in /platforms is bundled; add one with `npm run create-platform <name>`
 const platformModules = import.meta.glob('@platforms/*/platform.js', { eager: true });
@@ -57,8 +59,11 @@ async function boot() {
   const act = (action) => link.interact(action).catch((e) => toast(e.message, 'error'));
   const stage = new Stage($('stage'), { definition, link, kioskUrl, onAction: act, onToast: (m) => toast(m) });
   const panels = new Panels($('tabBody'), { definition, link, machine, act, toast, stage });
-  const bridge = new KioskBridge({ machine, definition, link, toast });
-  window.cafesim = { link, machine, definition, stage, bridge, platforms }; // handy in DevTools
+  const backend = createBackendClient(link, definition);
+  const bridge = new KioskBridge({ machine, definition, link, backend, toast });
+  const adminConsole = new AdminConsole({ backend, bridge, definition, toast });
+  $('consoleBtn').onclick = () => adminConsole.open();
+  window.cafesim = { link, machine, definition, stage, bridge, backend, adminConsole, platforms }; // handy in DevTools
 
   // ------------------------------------------------------------------ top bar
   document.querySelectorAll('[data-view]').forEach((b) => (b.onclick = () => stage.view(b.dataset.view)));
