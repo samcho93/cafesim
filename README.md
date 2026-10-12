@@ -219,7 +219,9 @@ POST https://cafesim.samdori93.workers.dev/api/interact?room=main   {"type":"aut
 GET  https://cafesim.samdori93.workers.dev/kscat?room=main&REQ=...&callback=cb
 ```
 
-배포: `npx wrangler login` 후 `npm run deploy:cf` (뷰어 빌드 + `packages/cloud` 배포). 로컬 확인은 `npm run cf:dev`.
+배포: `main`에 push하면 GitHub Actions가 테스트 → 빌드 → **GitHub Pages와 Cloudflare에 자동 배포**합니다
+(저장소 secret `CLOUDFLARE_API_TOKEN`, variable `CLOUDFLARE_ACCOUNT_ID` 필요).
+수동 배포는 `npx wrangler login` 후 `npm run deploy:cf`, 로컬 확인은 `npm run cf:dev`.
 
 ### 4. 새 플랫폼 만들기
 

@@ -1,4 +1,4 @@
-name: test & deploy viewer
+name: test & deploy (GitHub Pages + Cloudflare)
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: true
 
 jobs:
@@ -30,7 +30,8 @@ jobs:
         with:
           path: packages/viewer/dist
 
-  deploy:
+  # GitHub Pages: in-browser simulator (https://samcho93.github.io/cafesim/)
+  pages:
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -39,3 +40,34 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Cloudflare Workers + Durable Objects: shared cloud machine (https://cafesim.samdori93.workers.dev)
+  # needs repository secret CLOUDFLARE_API_TOKEN and variable CLOUDFLARE_ACCOUNT_ID
+  cloudflare:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    environment:
+      name: cloudflare
+      url: https://cafesim.samdori93.workers.dev
+    steps:
+      - name: Skip when the Cloudflare token is not configured
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::warning::CLOUDFLARE_API_TOKEN secret is not set - Cloudflare deploy skipped"
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - uses: actions/setup-node@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        with:
+          node-version: 22
+          cache: npm
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npm ci
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npm run build
+      - name: wrangler deploy
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: packages/cloud
+        run: npx wrangler deploy
