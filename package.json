@@ -1,0 +1,24 @@
+{
+  "name": "cafesim",
+  "version": "0.1.0",
+  "private": true,
+  "description": "M400 무인카페 3D 하드웨어 시뮬레이터 - virtual coffee machine, ice maker, cup dispenser and card terminal",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @cafesim/viewer",
+    "build": "npm run build -w @cafesim/viewer",
+    "preview": "npm run preview -w @cafesim/viewer",
+    "sim": "node packages/server/bin/cafesim.js start",
+    "sim:watch": "node --watch-path=packages/core/src --watch-path=platforms packages/server/bin/cafesim.js start",
+    "test": "node --test \"packages/*/test/*.test.js\"",
+    "example:order": "node examples/node-order.js",
+    "create-platform": "node packages/server/bin/cafesim.js create-platform"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

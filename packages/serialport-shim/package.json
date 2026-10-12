@@ -1,0 +1,11 @@
+{
+  "name": "@cafesim/serialport-shim",
+  "version": "0.1.0",
+  "description": "Drop-in replacement for the 'serialport' package that routes COM ports to the cafeSim virtual hardware over TCP",
+  "main": "index.cjs",
+  "exports": {
+    ".": "./index.cjs",
+    "./register": "./register.cjs"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@cafesim/viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "3D viewer, operator panels, script console and kiosk UI for the cafeSim M400 simulator",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@cafesim/core": "0.1.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@cafesim/core",
+  "version": "0.1.0",
+  "description": "Protocol codecs, virtual devices and host SDK for the cafeSim M400 simulator (Node + browser, no dependencies)",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src"],
+  "license": "MIT"
+}

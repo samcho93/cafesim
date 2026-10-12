@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>My Kiosk</title>
+    <!-- served by the viewer (npm run dev / GitHub Pages / cafesim start) -->
+    <script src="http://localhost:5173/cafesim-kiosk-sdk.js"></script>
+    <style>
+      body { margin: 0; width: 1024px; height: 600px; font-family: system-ui, 'Malgun Gothic'; background: #101418; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+      button { font-size: 28px; padding: 18px 36px; border-radius: 16px; border: 0; background: #ffb020; cursor: pointer; }
+      #log { font-size: 20px; color: #9fd3ff; min-height: 30px; }
+    </style>
+  </head>
+  <body>
+    <h1>원터치 아이스 아메리카노</h1>
+    <button id="go">주문하기 (2,000원)</button>
+    <div id="log"></div>
+    <script>
+      // Run:  npx serve examples/custom-kiosk -l 3000   then open the viewer with ?kiosk=http://localhost:3000
+      const log = (t) => (document.getElementById('log').textContent = t);
+      CafeSim.on('step', (s) => log(s.text));
+      CafeSim.on('guide', (g) => g[0] && log('👉 ' + g[0].text));
+      document.getElementById('go').onclick = async () => {
+        try {
+          await CafeSim.pay(2000);
+          await CafeSim.order('americano', 'ice');
+          log('완료! 맛있게 드세요');
+        } catch (e) {
+          log('오류: ' + e.message);
+        }
+      };
+    </script>
+  </body>
+</html>

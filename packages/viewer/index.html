@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cafeSim M400</title>
+    <meta name="description" content="M400 무인카페 3D 하드웨어 시뮬레이터 - 커피머신, 제빙기, 컵 디스펜서, 카드 단말기" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='14' y='18' width='30' height='34' rx='5' fill='%23c8372b'/><path d='M44 26h6a6 6 0 0 1 0 12h-6' fill='none' stroke='%23c8372b' stroke-width='5'/><path d='M22 8c0 4 4 4 4 8M32 8c0 4 4 4 4 8' stroke='%23885533' stroke-width='3' fill='none'/></svg>" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><b>cafeSim</b><span id="platformName">M400</span></div>
+      <select id="platformSelect" title="플랫폼"></select>
+      <span id="modeBadge" class="badge">LOCAL</span>
+      <nav class="views" aria-label="카메라">
+        <button data-view="overview" title="전체 보기">전체</button>
+        <button data-view="screen" title="터치스크린">화면</button>
+        <button data-view="outlets" title="투출구">투출구</button>
+        <button data-view="ice" title="제빙기">제빙기</button>
+        <button data-view="cups" title="컵 디스펜서">컵</button>
+        <button data-view="top" title="위에서">위</button>
+      </nav>
+      <div class="controls">
+        <label class="toggle" title="외장을 투명하게 해서 내부 구동부를 봅니다"><input type="checkbox" id="xray" /> 내부 보기</label>
+        <label class="toggle" title="안내되는 고객 동작(컵 옮기기, 카드 넣기)을 자동으로 수행"><input type="checkbox" id="autoAssist" /> 자동 진행</label>
+        <label class="speed" title="시뮬레이션 속도">속도 <input type="range" id="speed" min="0.5" max="8" step="0.5" value="1" /><output id="speedOut">1×</output></label>
+        <button id="pauseBtn" class="icon" title="일시정지">❚❚</button>
+        <button id="panelBtn" class="icon" title="패널 열기/닫기">☰</button>
+      </div>
+    </header>
+    <main class="layout">
+      <section id="stage" class="stage">
+        <div id="guide" class="guide" hidden>
+          <span class="guide-dot"></span>
+          <span id="guideText"></span>
+          <button id="guideDo">대신 하기</button>
+        </div>
+        <div id="toasts" class="toasts" aria-live="polite"></div>
+        <div id="served" class="served"></div>
+        <div class="hint">드래그: 회전 · 휠: 확대 · 컵 클릭 → 파란 원 클릭: 이동 · 카드 단말기 클릭: 카드 넣기</div>
+      </section>
+      <aside id="panel" class="panel">
+        <nav class="tabs" role="tablist">
+          <button data-tab="status" class="active">상태</button>
+          <button data-tab="control">제어</button>
+          <button data-tab="registers">레지스터</button>
+          <button data-tab="traffic">통신</button>
+          <button data-tab="script">스크립트</button>
+          <button data-tab="dev">연동</button>
+        </nav>
+        <div class="tab-body" id="tabBody"></div>
+      </aside>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

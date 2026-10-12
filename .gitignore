@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+# original kiosk application (proprietary, contains credentials) - kept locally only
+source/
+# local tooling
+.claude/
+# platforms created locally are fine to commit; remove this line's comment to ignore them
