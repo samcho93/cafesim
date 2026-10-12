@@ -830,3 +830,30 @@ button.danger {
 .list-pane {
   min-width: 0;
 }
+
+/* 연동 탭: 환경 구축 튜토리얼 */
+.tut-guide { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 8px 0 10px; }
+.tut-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.tut-pick button { font-size: 12px; }
+details.tut { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--panel); }
+details.tut > summary { cursor: pointer; padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; list-style: none; }
+details.tut > summary::-webkit-details-marker { display: none; }
+details.tut > summary b::before { content: '▸ '; color: var(--accent); }
+details.tut[open] > summary b::before { content: '▾ '; }
+details.tut > summary .muted { font-size: 12px; }
+.tut-body { padding: 0 12px 12px; font-size: 13px; line-height: 1.6; }
+.tut-body ol { padding-left: 20px; margin: 6px 0; }
+.tut-body li { margin: 6px 0; }
+.tut-body code { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.tut-body li > .muted { display: block; font-size: 12px; margin-top: 2px; }
+.snip { display: flex; gap: 4px; align-items: flex-start; margin: 6px 0; }
+.snip pre.snippet { margin: 0; flex: 1; min-width: 0; }
+.snip .copy { flex: none; font-size: 11px; padding: 3px 8px; }
+.os { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: start; margin: 6px 0; }
+.os .snip { margin: 0; min-width: 0; }
+.os-tag { font-size: 11px; font-weight: 700; color: var(--muted); padding-top: 8px; }
+.tut-ok { margin: 8px 0 0; padding: 6px 10px; border-radius: 8px; background: #e3f5ea; color: #1d6b3a; font-size: 12.5px; }
+@media (prefers-color-scheme: dark) { .tut-ok { background: #1c3527; color: #8fe0aa; } }
+.tut-table { display: table; width: 100%; font-size: 12px; margin-top: 6px; }
+.tut-faq dt { font-weight: 700; margin-top: 8px; }
+.tut-faq dd { margin: 2px 0 0; }

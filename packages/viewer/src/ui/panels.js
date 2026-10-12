@@ -338,48 +338,172 @@ export class Panels {
     };
   }
 
-  // ================================================================== 연동
+  // ================================================================== 연동 (환경 구축 튜토리얼)
   #dev() {
     const d = this.definition;
     const remote = this.link.mode === 'remote';
-    const base = location.href.split('?')[0].replace(/index\.html$/, '');
+    const cloud = !!this.link.info?.cloud;
+    const room = this.link.info?.room || 'main';
+    const here = location.origin + location.pathname.replace(/index\.html$/, '');
+    const cloudBase = cloud ? location.origin : 'https://cafesim.samdori93.workers.dev';
     const rows = d.devices
       .map((x) => `<tr><td>${esc(deviceTitle(x.type, x.key))}</td><td>${x.port?.path ? `${x.port.path} @ ${x.port.baudRate}` : '-'}</td><td>${x.port?.tcp ? `127.0.0.1:${x.port.tcp}` : x.port?.http ? `http://127.0.0.1:${x.port.http}` : '-'}</td></tr>`)
       .join('');
+    const code = (s) => `<div class="snip"><pre class="snippet">${s}</pre><button type="button" class="copy" title="복사">복사</button></div>`;
+    const os = (cmd, ps) => `<div class="os"><span class="os-tag">cmd</span>${code(cmd)}<span class="os-tag">PowerShell</span>${code(ps)}</div>`;
+    const ok = (t) => `<p class="tut-ok">✔ 확인: ${t}</p>`;
+    const sec = (id, title, sub, body) => `<details class="tut" data-tut="${id}"><summary><b>${title}</b><span class="muted">${sub}</span></summary><div class="tut-body">${body}</div></details>`;
+
     this.el.innerHTML = `
-      <div class="section-title">현재 모드: ${remote ? '서버 연결 (가상 하드웨어 서비스)' : '브라우저 내장 시뮬레이터'}</div>
-      <p class="muted">${remote ? '이 뷰어는 서버의 상태를 미러링합니다. 외부 프로그램이 TCP/COM 포트로 장치를 구동하면 여기에 그대로 표시됩니다.' : '외부 프로그램(원본 키오스크 앱, 다른 언어의 프로그램)과 연결하려면 아래처럼 서버를 실행하세요.'}</p>
-      <div class="section-title">1. 가상 하드웨어 서버 실행</div>
-      <pre class="snippet">npm install
-npm run build        # 3D 뷰어 빌드 (서버가 함께 제공)
-npm run sim          # http://localhost:8700</pre>
-      <table class="kv" style="display:table;width:100%;font-size:12px"><tr class="muted"><td>장치</td><td>실기 포트</td><td>시뮬레이터</td></tr>${rows}</table>
-      <div class="section-title">2. 원본 키오스크 앱을 수정 없이 연결</div>
-      <pre class="snippet">set NODE_OPTIONS=--require &lt;cafesim&gt;\\packages\\serialport-shim\\register.cjs
-set CAFESIM_PORTS=COM1=7001,COM2=7002,COM3=7003
-npm start</pre>
-      <p class="muted">또는 com0com 가상 COM 쌍을 만들고 <code>npm run sim -- --serial main=COM11,ice=COM12,cup=COM13</code> (앱은 COM1/2/3 쪽을 엽니다)</p>
-      <div class="section-title">3. 내 프로그램에서 SDK 사용 (Node)</div>
-      <pre class="snippet">import { connectMachine } from '@cafesim/server';
-const machine = await connectMachine();          // 시뮬레이터
-// const machine = await connectMachine({ serial: { main: 'COM1', ice: 'COM2', cup: 'COM3' } }); // 실제 M400
+      <div class="section-title">현재 모드: ${cloud ? `Cloudflare 클라우드 장비 (룸: ${esc(room)})` : remote ? '서버 연결 (가상 하드웨어 서비스)' : '브라우저 내장 시뮬레이터'}</div>
+      <p class="muted">${cloud ? '여러 사람이 같은 장비를 공유합니다. 외부 프로그램은 WebSocket · REST · 릴레이로 연결합니다 (6번).' : remote ? '이 뷰어는 서버의 상태를 미러링합니다. 외부 프로그램이 TCP/COM 포트로 장치를 구동하면 여기에 그대로 표시됩니다.' : '지금은 브라우저 안에서만 동작합니다. 외부 프로그램(원본 키오스크 앱, 내 프로그램, 다른 언어)과 연결하려면 아래 순서대로 내 PC에 환경을 만드세요.'}</p>
+      <div class="tut-guide">
+        <b>무엇을 하고 싶나요?</b>
+        <div class="tut-pick">
+          <button type="button" data-go="t1">가상 장비를 PC에서 실행</button>
+          <button type="button" data-go="t2">원본 키오스크 앱 연결</button>
+          <button type="button" data-go="t3">Node 로 장비 제어</button>
+          <button type="button" data-go="t4">Python · 다른 언어</button>
+          <button type="button" data-go="t5">나만의 키오스크 화면</button>
+          <button type="button" data-go="t6">클라우드 장비 연결</button>
+        </div>
+        <p class="muted">1~5번은 <b>0. 준비</b>를 먼저 한 번 해 두어야 합니다. 6번(클라우드)은 Node 만 있으면 됩니다.</p>
+      </div>
+
+      ${sec('t0', '0. 준비 — 한 번만', 'Node.js · Git 설치, 저장소 받기', `
+        <ol>
+          <li><b>Node.js 18 이상</b> 설치: <a href="https://nodejs.org/" target="_blank" rel="noopener">nodejs.org</a> 에서 LTS 를 받아 설치합니다 (설치 후 터미널을 새로 엽니다).</li>
+          <li><b>Git</b> 설치: <a href="https://git-scm.com/" target="_blank" rel="noopener">git-scm.com</a> (Windows 는 기본 옵션 그대로).</li>
+          <li>설치 확인 — 버전이 나오면 됩니다.${code('node -v\nnpm -v\ngit --version')}</li>
+          <li>작업할 폴더에서 저장소를 받고 필요한 패키지를 설치합니다 (1~2분).${code('git clone https://github.com/samcho93/cafesim.git\ncd cafesim\nnpm install')}</li>
+          <li>3D 뷰어를 빌드합니다 (서버가 이 화면을 함께 제공).${code('npm run build')}</li>
+        </ol>
+        ${ok('<code>packages/viewer/dist</code> 폴더가 생기고 오류 없이 끝남')}
+        <p class="muted">이후 명령은 모두 <code>cafesim</code> 폴더 안에서 실행합니다.</p>`)}
+
+      ${sec('t1', '1. 가상 하드웨어 서버 실행', '실기와 같은 포트를 내 PC에 엽니다', `
+        <ol>
+          <li>서버를 실행합니다. 이 터미널은 계속 열어 둡니다.${code('npm run sim')}
+            <span class="muted">고객 동작(컵 옮기기)을 자동으로: <code>npm run sim -- --auto</code> · 빠르게: <code>-- --speed 4</code> · 다른 포트: <code>-- --port 8800</code></span></li>
+          <li>터미널에 아래와 같은 줄이 나오면 준비 완료입니다.${code('[cafesim] viewer / REST / WebSocket : http://localhost:8700\n[cafesim] device main  TCP 127.0.0.1:7001\n[cafesim] device ice   TCP 127.0.0.1:7002\n[cafesim] device cup   TCP 127.0.0.1:7003\n[cafesim] KSCAT emulator http://127.0.0.1:27098')}</li>
+          <li>브라우저에서 <a href="http://localhost:8700" target="_blank" rel="noopener">http://localhost:8700</a> 을 엽니다. Windows 방화벽 창이 뜨면 <b>개인 네트워크 허용</b>.</li>
+        </ol>
+        <table class="kv tut-table"><tr class="muted"><td>장치</td><td>실기 포트</td><td>시뮬레이터</td></tr>${rows}</table>
+        ${ok('뷰어 상단 배지가 <b>SERVER</b> 이고, 이 연동 탭의 현재 모드가 "서버 연결"로 나옴')}`)}
+
+      ${sec('t2', '2. 원본 키오스크 앱 연결', '앱 코드는 고치지 않습니다 — 세 가지 방법', `
+        <p><b>방법 A. 실행 래퍼 (가장 간단, 권장)</b> — 시리얼 포트는 가상 하드웨어로, 메일빈 서버 호출은 가상 메일빈 서버로 돌립니다.</p>
+        <ol>
+          <li>원본 앱 소스를 <code>cafesim/source</code> 폴더에 둡니다 (저장소에는 포함되지 않음).</li>
+          <li>최초 1회 의존성 설치:${code('cd source\nnpm ci --ignore-scripts\nnode node_modules/electron/install.js\ncd ..')}</li>
+          <li>실행 (가상 하드웨어 + 가상 메일빈 서버가 함께 뜸):${code('npm run kiosk:legacy')}
+            <span class="muted">클라우드 룸에 붙이기: <code>npm run kiosk:legacy -- --cloud ${esc(cloudBase)}/?room=${esc(room)}</code> · DevTools: <code>-- --debug-port 9222</code></span></li>
+        </ol>
+        <p><b>방법 B. serialport 가로채기</b> — 이미 앱을 <code>npm start</code> 로 실행하는 경우. 1번 서버를 먼저 띄운 뒤, <b>같은 터미널</b>에서 (경로는 내 cafesim 폴더로):</p>
+        ${os('set NODE_OPTIONS=--require D:\\path\\to\\cafesim\\packages\\serialport-shim\\register.cjs\nset CAFESIM_PORTS=COM1=7001,COM2=7002,COM3=7003\nnpm start',
+          '$env:NODE_OPTIONS="--require D:\\path\\to\\cafesim\\packages\\serialport-shim\\register.cjs"\n$env:CAFESIM_PORTS="COM1=7001,COM2=7002,COM3=7003"\nnpm start')}
+        <p><b>방법 C. 가상 COM 포트 (com0com)</b> — 앱을 아예 건드릴 수 없을 때.</p>
+        <ol>
+          <li><a href="https://sourceforge.net/projects/com0com/" target="_blank" rel="noopener">com0com</a> 설치 후, <b>관리자 권한</b> 명령 프롬프트에서 com0com 설치 폴더로 이동해 포트 쌍 3개를 만듭니다.${code('setupc install PortName=COM1 PortName=COM11\nsetupc install PortName=COM2 PortName=COM12\nsetupc install PortName=COM3 PortName=COM13')}</li>
+          <li>시뮬레이터를 반대쪽 포트에 붙여 실행합니다 — 앱은 평소처럼 COM1/2/3 을 엽니다.${code('npm run sim -- --serial main=COM11,ice=COM12,cup=COM13')}</li>
+        </ol>
+        <p class="muted">카드 결제는 어느 방법이든 서버의 KSCAT 에뮬레이터(<code>127.0.0.1:27098</code>)가 받습니다 — 결제 요청이 오면 뷰어의 카드 단말기를 클릭.</p>
+        ${ok('앱에서 주문하면 <b>통신</b> 탭에 호스트 ⇄ 장치 프레임이 흐르고, 3D 화면의 장비가 움직임')}`)}
+
+      ${sec('t3', '3. 내 Node 프로그램으로 장비 제어', '같은 코드가 실제 M400 에서도 동작', `
+        <ol>
+          <li>터미널 1에서 서버 실행 (자동 진행 켜기):${code('npm run sim -- --auto')}</li>
+          <li><code>cafesim</code> 폴더 안에 <code>my/order.js</code> 파일을 만들고 붙여 넣습니다 (저장소 안이어야 <code>@cafesim/server</code> 를 찾습니다).${code(`import { connectMachine, loadPlatform } from '@cafesim/server';
+
+const definition = await loadPlatform('m400');
+const machine = await connectMachine({ definition });     // 시뮬레이터 (localhost)
+machine.on('step', (s) => console.log(s.text));
+
 await machine.init();
-await machine.pay(2000);
-await machine.order(menuItem, { temp: 'ice' });</pre>
-      <div class="section-title">4. 다른 언어 / REST</div>
-      <pre class="snippet">GET  http://localhost:8700/api/state
-POST http://localhost:8700/api/interact  {"type":"moveCup","cup":"cup1","to":"ice:tray"}
-TCP  127.0.0.1:7001  (메인보드 바이트 프로토콜, docs/PROTOCOL.md)</pre>
-      <div class="section-title">5. 나만의 키오스크 UI</div>
-      <pre class="snippet">&lt;script src="${esc(base)}cafesim-kiosk-sdk.js"&gt;&lt;/script&gt;
-const menu = await CafeSim.getMenu();
-await CafeSim.pay(2000);
-await CafeSim.order('americano', 'ice');</pre>
-      <p class="muted">뷰어 주소에 <code>?kiosk=http://localhost:3000</code> 을 붙이면 터치스크린에 내 UI가 표시됩니다.</p>
-      <div class="section-title">6. 새 플랫폼 만들기</div>
-      <pre class="snippet">npm run create-platform my-cafe
-npm run dev   →   /?platform=my-cafe</pre>
-      <p class="muted">자세한 내용: README.md, docs/ 폴더</p>`;
+const item = definition.menu.find((m) => m.id === 'americano');
+await machine.pay(item.price);                            // 카드 결제
+await machine.order(item, { temp: 'ice' });               // 컵 → 얼음 → 투출구 → 추출 → 픽업
+console.log('완료');
+process.exit(0);`)}</li>
+          <li>터미널 2에서 실행:${code('node my/order.js')}</li>
+        </ol>
+        <p class="muted">실제 장비: <code>connectMachine({ definition, serial: { main: 'COM1', ice: 'COM2', cup: 'COM3' } })</code> · 저수준 제어: <code>machine.main.command('coffee')</code>, <code>machine.main.actuator('mainPump', true)</code>, <code>machine.ice.dispense(5, 0.5)</code>, <code>machine.cup.dispense('hot')</code> · 완성 예제: <code>npm run example:order</code></p>
+        ${ok('터미널에 제조 단계가 차례로 찍히고, 뷰어에서 컵이 움직이며 음료가 완성됨')}`)}
+
+      ${sec('t4', '4. Python · 다른 언어', 'REST 로 간단히, 또는 TCP 바이트 프로토콜', `
+        <p><b>REST</b> — 1번 서버를 띄운 뒤 어떤 언어든 HTTP 로 상태를 읽고 조작합니다.</p>
+        ${os('curl http://localhost:8700/api/state\ncurl -X POST http://localhost:8700/api/interact -H "Content-Type: application/json" -d "{\\"type\\":\\"autoAssist\\",\\"on\\":true}"',
+          'Invoke-RestMethod http://localhost:8700/api/state\nInvoke-RestMethod -Method Post http://localhost:8700/api/interact -ContentType "application/json" -Body \'{"type":"autoAssist","on":true}\'')}
+        ${code(`# Python (pip install requests)
+import requests
+state = requests.get("http://localhost:8700/api/state").json()
+requests.post("http://localhost:8700/api/interact", json={"type": "moveCup", "cup": "cup1", "to": "ice:tray"})
+requests.post("http://localhost:8700/api/interact", json={"type": "device", "device": "pay", "action": {"type": "insertCard"}})`)}
+        <p><b>TCP (실기와 같은 바이트)</b> — 메인보드 <code>127.0.0.1:7001</code>, 제빙기 7002, 컵 7003. Python 3.10 이상에서 예제를 그대로 실행해 보세요.${code('python examples/python_client.py')}
+          프레임 형식은 <code>docs/PROTOCOL.md</code> 에 있습니다.</p>
+        ${ok('<code>/api/state</code> 가 JSON 을 돌려주고, interact 요청 후 뷰어 화면이 바뀜')}`)}
+
+      ${sec('t5', '5. 나만의 키오스크 화면', '어떤 웹 페이지든 터치스크린에 띄우기', `
+        <ol>
+          <li>1번 서버를 실행합니다.</li>
+          <li>예제를 복사해 내 화면을 만듭니다: <code>examples/custom-kiosk/index.html</code>. SDK 주소를 서버 주소로 바꿉니다.${code('&lt;script src="http://localhost:8700/cafesim-kiosk-sdk.js"&gt;&lt;/script&gt;\n&lt;script&gt;\n  CafeSim.on(\'guide\', (g) =&gt; g[0] &amp;&amp; console.log(g[0].text));\n  await CafeSim.pay(2000);\n  await CafeSim.order(\'americano\', \'ice\');\n&lt;/script&gt;')}
+            <span class="muted">개발 모드(<code>npm run dev</code>)로 볼 때는 <code>http://localhost:5173/cafesim-kiosk-sdk.js</code></span></li>
+          <li>내 화면을 3000 번 포트로 띄웁니다 (둘 중 하나).${code('npx serve examples/custom-kiosk -l 3000\npython -m http.server 3000 -d examples/custom-kiosk')}</li>
+          <li>뷰어를 <code>?kiosk=</code> 주소로 엽니다: <a href="http://localhost:8700/?kiosk=http://localhost:3000" target="_blank" rel="noopener">http://localhost:8700/?kiosk=http://localhost:3000</a></li>
+        </ol>
+        ${ok('3D 장비의 터치스크린에 내 페이지가 보이고, 버튼으로 결제 · 주문이 진행됨')}`)}
+
+      ${sec('t6', '6. 클라우드 장비 연결 (Cloudflare)', '설치 없이 여러 명이 같은 장비 공유', `
+        <ol>
+          <li>브라우저: <a href="${esc(cloudBase)}/?room=${esc(room)}" target="_blank" rel="noopener">${esc(cloudBase)}/?room=${esc(room)}</a> — <code>room</code> 이름이 같으면 같은 장비입니다 (내 장비는 다른 이름으로).</li>
+          <li>Node SDK (0. 준비 후):${code(`const machine = await connectMachine({ url: '${esc(cloudBase.replace(/^http/, 'ws'))}/ws?room=${esc(room)}', definition });`)}</li>
+          <li>REST:${code(`curl "${esc(cloudBase)}/api/state?room=${esc(room)}"`)}</li>
+          <li>TCP/COM 을 쓰는 프로그램(원본 키오스크 앱 등)은 <b>릴레이</b>로 — 내 PC에 7001-7003, 27098 이 열립니다.${code(`npm run relay -- ${esc(cloudBase)}/?room=${esc(room)}`)}</li>
+        </ol>
+        ${ok('두 브라우저에서 같은 room 을 열면 한쪽 조작이 다른 쪽에도 보임')}`)}
+
+      ${sec('t7', '7. 새 매장 구성(플랫폼) 만들기', '장치 · 메뉴 · 배관 · 3D 배치를 바꿔 새 장비로', `
+        ${code('npm run create-platform my-cafe -- --title "우리 매장"\nnpm run dev')}
+        <p>브라우저에서 <code>http://localhost:5173/?platform=my-cafe</code>. <code>platforms/my-cafe/platform.js</code> 를 고치면 바로 다시 로드됩니다. 자세한 방법: <code>docs/PLATFORM.md</code></p>`)}
+
+      ${sec('t8', '문제 해결', '자주 막히는 곳', `
+        <dl class="kv tut-faq">
+          <dt>'npm' 은(는) 내부 또는 외부 명령… 이 아닙니다</dt><dd>Node.js 설치 후 터미널을 새로 여세요. 그래도 안 되면 Node.js 를 다시 설치합니다.</dd>
+          <dt>PowerShell 에서 npm 실행이 막힘 (스크립트 실행 정책)</dt><dd>명령 프롬프트(cmd)에서 실행하면 됩니다.</dd>
+          <dt>EADDRINUSE (포트 사용 중)</dt><dd>이미 서버가 떠 있거나 다른 프로그램이 포트를 쓰고 있습니다. 기존 터미널을 닫거나 <code>npm run sim -- --port 8800 --tcp-offset 100</code> (TCP 7101-7103).</dd>
+          <dt>방법 B 로 연결했는데 장비가 반응하지 않음</dt><dd><code>NODE_OPTIONS</code> 의 경로가 실제 <code>register.cjs</code> 위치인지, <code>set</code> 과 <code>npm start</code> 를 <b>같은 터미널</b>에서 실행했는지 확인하세요.</dd>
+          <dt>컵이 움직이지 않고 제조가 멈춤</dt><dd>고객 동작(컵 옮기기)을 기다리는 중입니다. 뷰어에서 직접 옮기거나 <code>--auto</code> 로 실행하세요.</dd>
+          <dt>브라우저에서 localhost:8700 이 안 열림</dt><dd>서버 터미널이 열려 있는지, 방화벽에서 허용했는지 확인하세요.</dd>
+        </dl>
+        <p class="muted">더 자세한 내용: <code>README.md</code>, <code>docs/</code> (프로토콜 · 플랫폼 · 하드웨어 · 원본 기능 대응표)</p>`)}`;
+
+    // 바로가기 · 복사 · 펼친 항목 기억
+    const KEY = 'cafesim.devTut';
+    let open = [];
+    try { open = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { /* 저장 불가 */ }
+    if (!open.length) open = [remote || cloud ? (cloud ? 't6' : 't2') : 't0'];
+    this.el.querySelectorAll('details.tut').forEach((x) => {
+      x.open = open.includes(x.dataset.tut);
+      x.addEventListener('toggle', () => {
+        const now = [...this.el.querySelectorAll('details.tut[open]')].map((y) => y.dataset.tut);
+        try { localStorage.setItem(KEY, JSON.stringify(now)); } catch { /* 저장 불가 */ }
+      });
+    });
+    this.el.onclick = async (e) => {
+      const go = e.target.closest('[data-go]');
+      if (go) {
+        const t = this.el.querySelector(`details[data-tut="${go.dataset.go}"]`);
+        t.open = true;
+        t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      const btn = e.target.closest('.copy');
+      if (!btn) return;
+      const text = btn.previousElementSibling.textContent;
+      try { await navigator.clipboard.writeText(text); btn.textContent = '복사됨'; }
+      catch { const r = document.createRange(); r.selectNodeContents(btn.previousElementSibling); getSelection().removeAllRanges(); getSelection().addRange(r); btn.textContent = '선택됨'; }
+      setTimeout(() => (btn.textContent = '복사'), 1500);
+    };
   }
 }
 
