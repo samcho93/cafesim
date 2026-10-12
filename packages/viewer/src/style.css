@@ -857,3 +857,129 @@ details.tut > summary .muted { font-size: 12px; }
 .tut-table { display: table; width: 100%; font-size: 12px; margin-top: 6px; }
 .tut-faq dt { font-weight: 700; margin-top: 8px; }
 .tut-faq dd { margin: 2px 0 0; }
+
+/* ------------------------------------------------------------------ robot cafe */
+.order-popup {
+  position: fixed;
+  z-index: 40;
+  right: 16px;
+  bottom: 16px;
+  background: #15171a;
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  border: 1px solid #2c3137;
+}
+.order-popup[hidden] {
+  display: none;
+}
+.op-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  color: #fff;
+  cursor: move;
+  user-select: none;
+  font-size: 12px;
+}
+.op-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.op-btns button {
+  background: #2c3137;
+  border-color: #3a4048;
+  color: #fff;
+  padding: 2px 8px;
+}
+.op-body {
+  overflow: hidden;
+  position: relative;
+}
+.op-body iframe {
+  border: 0;
+  transform-origin: 0 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: #fff;
+}
+.robot-card {
+  position: absolute;
+  z-index: 3;
+  left: 12px;
+  top: 70px;
+  width: min(330px, calc(100% - 24px));
+  background: rgba(20, 22, 26, 0.88);
+  color: #e8eaed;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.robot-card.busy {
+  outline: 2px solid #2fbf71;
+}
+.rc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rc-src {
+  color: #9aa1a9;
+  font-size: 10px;
+}
+.rc-head button {
+  margin-left: auto;
+  background: #2c3137;
+  border-color: #3a4048;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+.rc-status {
+  margin: 6px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rc-joints {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px 8px;
+  font-size: 11px;
+  color: #9aa1a9;
+}
+.rc-joints span {
+  display: flex;
+  justify-content: space-between;
+}
+.rc-joints b {
+  color: #e8eaed;
+  font-variant-numeric: tabular-nums;
+}
+.rc-script {
+  margin: 8px 0 0;
+  max-height: 200px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #b7f0c8;
+  background: #0d0f12;
+  padding: 6px;
+  border-radius: 6px;
+  white-space: pre;
+}
+@media (max-width: 860px) {
+  .robot-card {
+    top: auto;
+    bottom: 8px;
+  }
+}
+.robot-demo-btn {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+  font-weight: 700;
+}

@@ -4,6 +4,7 @@ import { Panels } from './ui/panels.js';
 import { KioskBridge } from './kiosk/bridge.js';
 import { createBackendClient } from './backendClient.js';
 import { AdminConsole } from './ui/console.js';
+import { OrderKioskPopup, RobotCard } from './ui/robotUi.js';
 
 // Every platform folder in /platforms is bundled; add one with `npm run create-platform <name>`
 const platformModules = import.meta.glob('@platforms/*/platform.js', { eager: true });
@@ -16,6 +17,8 @@ const $ = (id) => document.getElementById(id);
 async function detectServer() {
   if (params.has('server')) return params.get('server');
   if (params.has('local')) return null;
+  // the robot cafe is a self-contained demo that runs in this browser
+  if (platforms[params.get('platform')]?.layout?.robot) return null;
   try {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 800);
@@ -47,11 +50,19 @@ async function boot() {
 
   const sel = $('platformSelect');
   for (const p of Object.values(platforms)) sel.add(new Option(p.name, p.id, false, p.id === definition.id));
-  sel.disabled = !!serverUrl;
-  sel.onchange = () => {
-    params.set('platform', sel.value);
+  const go = (id) => {
+    // the server's own platform is mirrored, every other platform (e.g. the robot cafe demo) runs in this browser
+    if (serverUrl && id === link.platformId) params.delete('platform');
+    else params.set('platform', id);
+    params.delete('server');
     location.search = params.toString();
   };
+  sel.onchange = () => go(sel.value);
+  const robotDemo = Object.values(platforms).find((p) => p.layout?.robot);
+  if (robotDemo && !definition.layout?.robot) {
+    $('robotDemoBtn').hidden = false;
+    $('robotDemoBtn').onclick = () => go(robotDemo.id);
+  }
 
   const machine = createMachine(link, definition);
   const kioskUrl = params.get('kiosk') ?? definition.kiosk ?? `./kiosk.html?platform=${definition.id}`;
@@ -63,6 +74,25 @@ async function boot() {
   const bridge = new KioskBridge({ machine, definition, link, backend, toast });
   const adminConsole = new AdminConsole({ backend, bridge, definition, toast });
   $('consoleBtn').onclick = () => adminConsole.open();
+
+  // ------------------------------------------------------------------ order kiosk pop-up (separate monitor) + robot cell
+  const orderUrl = `./kiosk.html?platform=${definition.id}`;
+  const orderPopup = new OrderKioskPopup({ url: orderUrl, title: `${definition.name} · 주문 키오스크` });
+  $('orderBtn').onclick = () => orderPopup.toggle();
+  let robot = null;
+  if (definition.layout?.robot) {
+    const { RobotCell } = await import('./robot/RobotCell.js');
+    robot = new RobotCell({ stage, link, definition });
+    stage.robot = robot;
+    const card = new RobotCard(robot, definition.layout.robot.model);
+    toast('UR5e 로봇 모델을 불러오는 중... (studyUR)');
+    robot
+      .load()
+      .then(() => toast('로봇 준비 완료 - 주문 키오스크에서 메뉴를 주문하세요'))
+      .catch((e) => toast(`로봇 로딩 실패: ${e.message}`, 'error'));
+    void card;
+    orderPopup.open();
+  }
   window.cafesim = { link, machine, definition, stage, bridge, backend, adminConsole, platforms }; // handy in DevTools
 
   // ------------------------------------------------------------------ top bar
@@ -94,9 +124,9 @@ async function boot() {
     if (!prompts.length) return;
     const actionable = prompts.find((p) => p.action);
     const main = actionable ?? prompts[0];
-    $('guideText').textContent = main.text;
-    g.classList.toggle('waiting', !actionable);
-    $('guideDo').hidden = !actionable;
+    $('guideText').textContent = robot ? `${robot.busy ? robot.status : main.text}` : main.text;
+    g.classList.toggle('waiting', !actionable || !!robot);
+    $('guideDo').hidden = !actionable || !!robot;
     currentAction = actionable?.action ?? null;
   };
   $('guideDo').onclick = () => currentAction && act(currentAction);
@@ -126,6 +156,7 @@ async function boot() {
   });
 
   if (params.has('view')) stage.view(params.get('view'));
+  else if (robot) stage.view('robot', true);
 }
 
 function toast(message, level = 'info') {

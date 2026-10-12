@@ -35,6 +35,7 @@ class CupView {
   constructor(cup, scene) {
     const d = DIM[cup.type] ?? DIM.hot;
     this.dim = d;
+    this.type = cup.type;
     this.group = new THREE.Group();
     this.group.userData.cupId = cup.id;
     const wallMat =
@@ -143,9 +144,10 @@ export class CupLayer {
         this.views.set(cup.id, v);
         if (target) v.moveTo(target, { drop: cup.slot?.startsWith('cup') || true, duration: 0.5 });
         v.slot = cup.slot;
-      } else if (cup.slot !== v.slot && target) {
-        v.moveTo(target);
+      } else if (cup.slot !== v.slot) {
         v.slot = cup.slot;
+        if (target) v.moveTo(target);
+        else v.anim = null; // e.g. carried by the robot: positioned by the stage every frame
       }
       v.setContents(cup);
     }

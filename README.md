@@ -84,6 +84,7 @@ flowchart LR
 | [`packages/server`](packages/server) | `cafesim` CLI: 장치별 TCP 포트, 가상/실제 COM 포트, KSCAT HTTP 에뮬레이터, REST, WebSocket, 빌드된 뷰어 제공 |
 | [`packages/serialport-shim`](packages/serialport-shim) | `require('serialport')`를 가로채 COM 포트를 시뮬레이터 TCP로 연결 (기존 앱 무수정 연동) |
 | [`packages/cloud`](packages/cloud) | Cloudflare Worker + Durable Object: 룸별 공유 장비, WebSocket 브리지, REST, KSCAT, 뷰어 정적 파일 |
+| [`packages/viewer/src/robot`](packages/viewer/src/robot) | 로봇 카페: UR 로봇 셀 (studyUR 기구학 vendored, `tools/sync-studyur.mjs`) |
 | [`tools/legacy-kiosk`](tools/legacy-kiosk) | 원본 키오스크 앱 실행 래퍼 (시리얼→시뮬레이터, 창 모드, 업데이트·작업표시줄 차단) |
 | [`packages/viewer`](packages/viewer) | Three.js 3D 뷰어, 운영 패널, 스크립트 콘솔, 기본 키오스크 UI, 키오스크 SDK |
 | [`platforms/m400`](platforms/m400/platform.js) | M400 정의: 장치, 배관 라우팅, 제조 시퀀스, 메뉴, 3D 배치 |
@@ -247,6 +248,11 @@ GET  https://cafesim.samdori93.workers.dev/kscat?room=main&REQ=...&callback=cb
 배포: `main`에 push하면 GitHub Actions가 테스트 → 빌드 → **GitHub Pages와 Cloudflare에 자동 배포**합니다
 (저장소 secret `CLOUDFLARE_API_TOKEN`, variable `CLOUDFLARE_ACCOUNT_ID` 필요).
 수동 배포는 `npx wrangler login` 후 `npm run deploy:cf`, 로컬 확인은 `npm run cf:dev`.
+
+### 3-4. 로봇 카페 시연 (studyUR 연동)
+
+뷰어 상단 **🤖 로봇 카페 시연** (또는 `/?platform=m400-robot`). 주문 키오스크 팝업에서 주문하면 **UR5e**가 컵을 컵 디스펜서 → 제빙기 → 투출구 → 픽업대로 옮깁니다.
+로봇 경로는 [studyUR](https://github.com/samcho93/studyUR)의 기구학·궤적 계획(`planProgram`, `ikClosest`)으로 만들고 공식 UR 메시로 표시하며, 현재 동작의 URScript를 보여 줍니다. 자세한 내용: [docs/ROBOT-CAFE.md](docs/ROBOT-CAFE.md)
 
 ### 4. 새 플랫폼 만들기
 

@@ -758,7 +758,41 @@ setInterval(async () => {
   } catch {}
 }, 3000);
 
+/** Machine screen of the robot cafe: production status board (orders come from the kiosk monitor). */
+async function statusBoard() {
+  $('app').hidden = true;
+  const state = { text: '주문을 기다리고 있습니다', sub: '옆의 주문 키오스크에서 메뉴를 선택해 주세요', guide: '', items: [] };
+  const draw = () =>
+    screen(`<div class="big">🤖☕</div><h2 style="font-size:34px">ROBOT CAFE</h2><p class="muted">${esc(state.sub)}</p>
+      <h2 style="margin-top:18px">${esc(state.text)}</h2>
+      <div class="prog-strip">${state.items.map((it, i) => `<div class="drink ${it.state}"><b>${esc(it.name)}</b><small>${i + 1}번째 · ${{ wait: '대기', now: '제조중', done: '완료' }[it.state]}</small></div>`).join('')}</div>
+      <div class="guide-line">${state.guide ? `🤖 ${esc(state.guide)}` : ''}</div>`);
+  S.on('progress', (e) => {
+    if (e.phase === 'finish') {
+      state.items.forEach((it) => (it.state = 'done'));
+      state.text = '주문하신 음료가 완성되었습니다';
+      state.sub = '픽업대에서 음료를 받아 가세요';
+      setTimeout(() => ((state.items = []), (state.text = '주문을 기다리고 있습니다'), (state.sub = '옆의 주문 키오스크에서 메뉴를 선택해 주세요'), draw()), 8000);
+    } else if (e.goods && e.total) {
+      if (state.items.length !== e.total) state.items = Array.from({ length: e.total }, () => ({ name: '', state: 'wait' }));
+      state.items.forEach((it, i) => (it.state = i < e.index ? 'done' : i === e.index ? 'now' : 'wait'));
+      state.items[e.index].name = e.goods.gds_name;
+      state.text = e.text;
+      state.sub = `${e.index + 1} / ${e.total} 잔 제조 중`;
+    } else if (e.text) state.text = e.text;
+    draw();
+  });
+  S.on('guide', (prompts) => {
+    const p = prompts.find((x) => x.action) ?? prompts[0];
+    state.guide = p?.text ?? '';
+    draw();
+  });
+  await call('meta');
+  draw();
+}
+
 async function boot() {
+  if (new URLSearchParams(location.search).get('mode') === 'status') return statusBoard();
   if (!S?.available) {
     document.body.innerHTML = '<p style="padding:40px;font-size:20px">이 화면은 cafeSim 뷰어 안에서 실행됩니다.</p>';
     return;

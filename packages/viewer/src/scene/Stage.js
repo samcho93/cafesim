@@ -126,6 +126,15 @@ export class Stage {
     label.position.set(p[0], 0.002, p[2] + 0.11);
     s.add(label);
     this.slotPos.set('pickup', new THREE.Vector3(p[0], 0.001, p[2]));
+    if (this.definition.layout?.pickupStand) {
+      // free-standing pickup stand in front of the counter (robot cafe)
+      const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.89, 24), new THREE.MeshStandardMaterial({ color: 0x8a7a68, metalness: 0.2, roughness: 0.6 }));
+      stand.position.set(p[0], -0.445, p[2]);
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 40), new THREE.MeshStandardMaterial({ color: 0xece7df, roughness: 0.5 }));
+      top.position.set(p[0], -0.015, p[2]);
+      stand.castShadow = top.castShadow = top.receiveShadow = true;
+      s.add(stand, top);
+    }
   }
 
   #buildUnits() {
@@ -300,6 +309,7 @@ export class Stage {
       ice: { pos: [pos(ice).x, 0.34, 0.92], target: [pos(ice).x, 0.25, 0.1] },
       cups: { pos: [pos(cup).x, 0.3, 0.98], target: [pos(cup).x, 0.25, 0.1] },
       top: { pos: [m.x + 0.3, 1.9, 0.9], target: [m.x + 0.3, 0.2, 0.05] },
+      robot: { pos: [m.x + 1.6, 0.9, 2.0], target: [m.x + 0.4, 0.15, 0.35] },
       find,
     };
   }
@@ -366,6 +376,9 @@ export class Stage {
     }
     this.controls.update();
     this.cups.tick(dt);
+    if (this.robot) {
+      for (const v of this.cups.views.values()) if (v.slot === 'robot:gripper') v.group.position.copy(this.robot.carriedCupPosition(v.type));
+    }
 
     if (snap) {
       for (const u of this.units) u.model.update?.(snap.devices[u.device], u.payment ? snap.devices[u.payment] : null, t, snap.world, u.device);

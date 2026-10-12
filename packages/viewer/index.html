@@ -13,6 +13,7 @@
       <div class="brand"><b>cafeSim</b><span id="platformName">M400</span></div>
       <select id="platformSelect" title="플랫폼"></select>
       <span id="modeBadge" class="badge">LOCAL</span>
+      <button id="robotDemoBtn" class="robot-demo-btn" title="UR5e 로봇이 컵을 옮기는 로봇 카페 시연 (studyUR 연동)" hidden>🤖 로봇 카페 시연</button>
       <nav class="views" aria-label="카메라">
         <button data-view="overview" title="전체 보기">전체</button>
         <button data-view="screen" title="터치스크린">화면</button>
@@ -20,11 +21,13 @@
         <button data-view="ice" title="제빙기">제빙기</button>
         <button data-view="cups" title="컵 디스펜서">컵</button>
         <button data-view="top" title="위에서">위</button>
+        <button data-view="robot" title="로봇 카페 전체">로봇</button>
       </nav>
       <div class="controls">
         <label class="toggle" title="외장을 투명하게 해서 내부 구동부를 봅니다"><input type="checkbox" id="xray" /> 내부 보기</label>
         <label class="toggle" title="안내되는 고객 동작(컵 옮기기, 카드 넣기)을 자동으로 수행"><input type="checkbox" id="autoAssist" /> 자동 진행</label>
         <label class="speed" title="시뮬레이션 속도">속도 <input type="range" id="speed" min="0.5" max="8" step="0.5" value="1" /><output id="speedOut">1×</output></label>
+        <button id="orderBtn" title="별도 모니터용 주문 키오스크 (팝업)">🖥 주문 키오스크</button>
         <button id="consoleBtn" class="console-btn" title="가상 메일빈 서버 관리 (메뉴·레시피·매장·장비 설정, 재고, 결제/환불, 원격 제어)">⚙ 관리 콘솔</button>
         <button id="pauseBtn" class="icon" title="일시정지">❚❚</button>
         <button id="panelBtn" class="icon" title="패널 열기/닫기">☰</button>
