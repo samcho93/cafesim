@@ -25,3 +25,49 @@ test('external program drives the virtual hardware over TCP + KSCAT HTTP', async
     await srv.close();
   }
 });
+
+test('two clients sharing one machine are serialised by the room lock', async () => {
+  const srv = await startServer({ platform: 'm400', port: 8891, tcp: false, kscat: false, speed: 20, autoAssist: true, log: () => {} });
+  srv.platform.assistDelay = 0.2;
+  const url = 'ws://127.0.0.1:8891/ws';
+  const def = srv.platform.definition;
+  const a = await connectMachine({ url, definition: def });
+  const b = await connectMachine({ url, definition: def });
+  const served = [];
+  srv.platform.on('event', (e) => e.type === 'cup-served' && served.push(e.record));
+  try {
+    const item = def.menu.find((m) => m.id === 'americano');
+    const run = async (m, temp) => {
+      await m.init();
+      await m.order(item, { temp });
+    };
+    await Promise.all([run(a, 'ice'), run(b, 'hot')]);
+    for (let i = 0; i < 40 && served.length < 2; i++) await new Promise((r) => setTimeout(r, 100));
+    assert.equal(served.length, 2);
+    for (const cup of served) assert.ok(cup.contents.coffee >= 39, `coffee in ${cup.type} cup`);
+  } finally {
+    a.close();
+    b.close();
+    await srv.close();
+  }
+});
+
+test('an init issued during an order on the same client waits for the order', async () => {
+  const srv = await startServer({ platform: 'm400', port: 8892, tcp: false, kscat: false, speed: 20, autoAssist: true, log: () => {} });
+  srv.platform.assistDelay = 0.2;
+  const def = srv.platform.definition;
+  const m = await connectMachine({ url: 'ws://127.0.0.1:8892/ws', definition: def });
+  const served = [];
+  srv.platform.on('event', (e) => e.type === 'cup-served' && served.push(e.record));
+  try {
+    await m.init();
+    const order = m.order(def.menu.find((x) => x.id === 'americano'), { temp: 'hot' });
+    await new Promise((r) => setTimeout(r, 300));
+    await Promise.all([order, m.init()]); // like the kiosk page booting mid-order
+    for (let i = 0; i < 40 && !served.length; i++) await new Promise((r) => setTimeout(r, 100));
+    assert.ok(served[0]?.contents.coffee >= 39, 'order finished with coffee');
+  } finally {
+    m.close();
+    await srv.close();
+  }
+});

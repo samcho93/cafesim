@@ -80,6 +80,7 @@ export async function connectMachine({ host = '127.0.0.1', tcp = { main: 7001, i
       ice: key('ice-maker') && new IceClient(link.openTransport(key('ice-maker'), 'sdk')),
       pay: key('kscat-terminal') && new PaymentClient((req) => link.pay(key('kscat-terminal'), req)),
       definition,
+      lock: link.lock,
     });
     machine.link = link;
     const close = machine.close.bind(machine);

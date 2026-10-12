@@ -14,8 +14,13 @@ import { MainBoardClient, CupClient, IceClient, PaymentClient } from './clients.
  * (TCP to the sim server, or COM ports to the real machine) needs no code change.
  */
 export class Machine extends Emitter {
-  constructor({ main, cup, ice, pay, definition = {} }) {
+  /**
+   * @param lock optional (label) => Promise<release()>  exclusive access when several clients
+   *             share one machine (cloud rooms). Local simulators do not need it.
+   */
+  constructor({ main, cup, ice, pay, definition = {}, lock = null }) {
     super();
+    this.lock = lock;
     this.main = main;
     this.cup = cup;
     this.ice = ice;
@@ -44,7 +49,38 @@ export class Machine extends Emitter {
   }
 
   /** Boot sequence of the kiosk app: reset, clear errors, temperatures, cup + ice init. */
+  #chain = Promise.resolve();
+
+  /**
+   * Run fn exclusively: operations of this Machine run one after another (e.g. a kiosk
+   * init never resets the board in the middle of an order), and, when the machine is shared
+   * (cloud room), also after other clients' operations.
+   */
+  async exclusive(label, fn) {
+    const prev = this.#chain;
+    let done;
+    this.#chain = new Promise((r) => (done = r));
+    let granted = false;
+    const notice = setTimeout(() => !granted && this.step('queue', '다른 주문이 끝나기를 기다리는 중...'), 400);
+    let release = null;
+    try {
+      await prev;
+      if (this.lock) release = await this.lock(label);
+      granted = true;
+      clearTimeout(notice);
+      return await fn();
+    } finally {
+      clearTimeout(notice);
+      release?.();
+      done();
+    }
+  }
+
   async init(temps = this.definition.temperatures) {
+    return this.exclusive('초기화', () => this.#init(temps));
+  }
+
+  async #init(temps) {
     this.step('init', '장치 초기화 중...');
     if (this.main) {
       await this.main.reset();
@@ -95,7 +131,11 @@ export class Machine extends Emitter {
    * Make one drink: cup → (ice) → place on outlet → extraction → take away.
    * Emits 'step' events with customer instructions while waiting for physical actions.
    */
-  async order(item, { temp = item.temps?.[0] ?? 'hot', spout } = {}) {
+  async order(item, opts = {}) {
+    return this.exclusive(item.name, () => this.#order(item, opts));
+  }
+
+  async #order(item, { temp = item.temps?.[0] ?? 'hot', spout } = {}) {
     if (this.busy) throw new Error('Machine is busy');
     this.busy = true;
     try {

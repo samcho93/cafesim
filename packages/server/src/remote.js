@@ -48,6 +48,10 @@ export async function connectRemote(url) {
 
   link.interact = (action) => call({ t: 'interact', action });
   link.pay = (device, req) => call({ t: 'pay', device, req });
+  link.lock = async (label) => {
+    const lock = await call({ t: 'lock', label });
+    return () => send({ t: 'unlock', lock });
+  };
   link.openTransport = (device, name = 'node') => {
     const conn = `${name}-${process.pid}-${++seq}`;
     const listeners = new Set();

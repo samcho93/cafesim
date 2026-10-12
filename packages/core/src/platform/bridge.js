@@ -10,6 +10,8 @@
  *   { t:'open', device, conn }                open a raw byte line to a device (like a serial cable)
  *   { t:'tx', conn, bytes }                   bytes to the device      { t:'close', conn }
  *   { t:'pay', id, device, req }              KSCAT telegram -> response
+ *   { t:'lock', id, label }                  room-wide order lock: acks when the caller may drive the
+ *   { t:'unlock', lock: <lock id> }           machine; every other lock request queues behind it
  *
  * @param platform  running Platform
  * @param send      (message object) => void
@@ -19,6 +21,21 @@
 export function attachBridge(platform, send, info = {}, { snapshotMs = 100 } = {}) {
   const conns = new Map();
   const definition = platform.definition;
+  const lock = (platform.orderLock ??= { holder: null, queue: [] });
+  const me = {};
+  const grantNext = () => {
+    if (lock.holder) return;
+    const next = lock.queue.shift();
+    if (!next) return;
+    lock.holder = next;
+    next.grant();
+  };
+  const release = (id) => {
+    const mine = (q) => q.owner === me && (id === undefined || q.id === id);
+    if (lock.holder && mine(lock.holder)) lock.holder = null;
+    lock.queue = lock.queue.filter((q) => !mine(q));
+    grantNext();
+  };
   send({
     t: 'hello',
     platform: definition.id,
@@ -47,6 +64,10 @@ export function attachBridge(platform, send, info = {}, { snapshotMs = 100 } = {
           conns.delete(m.conn);
         } else if (m.t === 'pay') send({ t: 'payres', id: m.id, res: await platform.device(m.device).request(m.req) });
         else if (m.t === 'ping') send({ t: 'pong', id: m.id });
+        else if (m.t === 'lock') {
+          lock.queue.push({ owner: me, id: m.id, label: m.label ?? '주문', grant: () => send({ t: 'ack', id: m.id, result: m.id }) });
+          grantNext();
+        } else if (m.t === 'unlock') release(m.lock);
       } catch (e) {
         send({ t: 'error', id: m.id, error: e.message });
       }
@@ -54,6 +75,7 @@ export function attachBridge(platform, send, info = {}, { snapshotMs = 100 } = {
     close() {
       clearInterval(timer);
       offs.forEach((f) => f());
+      release();
       conns.forEach((c) => c.close());
       conns.clear();
     },

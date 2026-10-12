@@ -72,6 +72,7 @@ export class Panels {
     const spills = Object.entries(w.spills);
     parts.push(`<div class="card-dev"><h3>월드 <small>t=${snap.time.toFixed(1)}s ×${snap.speed}</small></h3>
       <dl class="kv"><dt>컵</dt><dd>${w.cups.map((c) => `${c.type.toUpperCase()}@${c.slot ?? '-'} (${Math.round(c.volume)}cc)`).join('<br>') || '-'}</dd>
+      ${snap.lock ? `<dt>공유 장비</dt><dd>${snap.lock.busy ? `사용 중: ${esc(snap.lock.label)}${snap.lock.waiting ? ` · 대기 ${snap.lock.waiting}건` : ''}` : '대기'}</dd>` : ''}
       <dt>흘린 양</dt><dd>${spills.length ? spills.map(([s, v]) => `${s}: ${Math.round(v)}`).join(', ') + ' <button data-a="clearSpills">닦기</button>' : '없음'}</dd></dl></div>`);
     host.innerHTML = parts.join('');
     host.querySelector('[data-a="clearSpills"]')?.addEventListener('click', () => this.act({ type: 'clearSpills' }));

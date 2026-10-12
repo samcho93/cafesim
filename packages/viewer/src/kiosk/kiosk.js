@@ -123,6 +123,7 @@ function overlay({ icon, title, text = '', steps = null, cancel = false }) {
 
 let currentStep = null;
 function onStep(s) {
+  if (state.busy && s.id === 'queue') $('ovText').textContent = s.text;
   if (!state.busy || !STEP_ORDER.includes(s.id)) return;
   currentStep = s.id;
   const idx = STEP_ORDER.indexOf(s.id);

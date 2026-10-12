@@ -91,6 +91,12 @@ export class RemoteLink extends Emitter {
     return this.#call({ t: 'pay', device, req });
   }
 
+  /** Room-wide order lock (shared cloud machine). Resolves with a release function. */
+  async lock(label) {
+    const lock = await this.#call({ t: 'lock', label });
+    return () => this.ws.readyState === 1 && this.ws.send(JSON.stringify({ t: 'unlock', lock }));
+  }
+
   openTransport(device, name = 'viewer') {
     const conn = `${name}-${++this.#seq}`;
     const listeners = new Set();
@@ -120,5 +126,6 @@ export function createMachine(link, definition) {
     ice: ice && new IceClient(link.openTransport(ice.key, 'sdk')),
     pay: pay && new PaymentClient((req) => link.pay(pay.key, req)),
     definition,
+    lock: link.lock ? (label) => link.lock(label) : null,
   });
 }

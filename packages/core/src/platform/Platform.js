@@ -154,6 +154,7 @@ export class Platform extends Emitter {
       devices: Object.fromEntries(Object.entries(this.devices).map(([k, d]) => [k, d.snapshot()])),
       world: this.world.snapshot(),
       guide: this.guide,
+      lock: this.orderLock ? { busy: !!this.orderLock.holder, label: this.orderLock.holder?.label ?? null, waiting: this.orderLock.queue.length } : null,
     };
   }
 }
